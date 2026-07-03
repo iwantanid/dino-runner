@@ -64,133 +64,154 @@ const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
 
 // ─── GAME STATE ───
-let gameState = 'waiting'; // waiting|playing|stageClear|gameOver
+let gameState = 'waiting';
 let stage = 1, score = 0, obstaclesPassed = 0;
 let hiScore = parseInt(localStorage.getItem('dinoHi')||'0');
 let frame = 0, obstacleTimer = 0;
 let obstacles = [], particles = [];
 
-// ─── RESIZE: fill landscape viewport ───
+// ─── RESIZE ───
 const GAME_W = 900, GAME_H = 300;
-let scale = 1, offX = 0, offY = 0;
-
 function resize() {
   const vw = window.innerWidth, vh = window.innerHeight;
-  // landscape ratio: 900:300 = 3:1
   let w, h;
   if (vw / vh > GAME_W / GAME_H) {
-    // viewport wider than game → fit height
-    h = vh * 0.88;
-    w = h * (GAME_W / GAME_H);
+    h = vh * 0.88; w = h * (GAME_W / GAME_H);
   } else {
-    // viewport taller than game → fit width
-    w = vw * 0.96;
-    h = w * (GAME_H / GAME_W);
+    w = vw * 0.96; h = w * (GAME_H / GAME_W);
   }
-  // ensure min size
   if (w < 320) { w = 320; h = w * (GAME_H/GAME_W); }
   canvas.style.width = w + 'px';
   canvas.style.height = h + 'px';
   canvas.width = GAME_W;
   canvas.height = GAME_H;
-  scale = w / GAME_W;
 }
 window.addEventListener('resize', resize);
 window.addEventListener('orientationchange', () => setTimeout(resize, 100));
 resize();
 
-// ─── GAME CONSTANTS ───
-const GROUND_Y = 245;
-const PX = 3;
+// ─── CONSTANTS ───
+const GROUND_Y = 250;
+const DINO_X = 65;
 
 const dino = {
-  x: 70, y: GROUND_Y, w: 42, h: 45,
+  x: DINO_X, y: GROUND_Y,
   vy: 0, jumping: false,
-  jumpPower: -10.5, gravity: 0.55
+  jumpPower: -9.5, gravity: 0.5
 };
 
-// ─── PIXEL SPRITES ───
-const dinoRun1 = [
-  ".....xxxxx.......",
-  "....xxxxxxx......",
-  "....xxxxxxxx.....",
-  "....xxxxxxxx.....",
-  "....xxxxxxxx.....",
-  "....xxxxxxx......",
-  "....xxxxxxx......",
-  "....xxxxxxxx.....",
-  "....xxxxxxxx.....",
-  ".....xxxxxxxxx...",
-  ".....xxxxxxxxxx..",
-  "......xxxxxxxxx..",
-  "......xxxxxxxxx..",
-  ".......xxxxxx....",
-  "........xxxx.....",
-];
-const dinoRun2 = [
-  ".....xxxxx.......",
-  "....xxxxxxx......",
-  "....xxxxxxxx.....",
-  "....xxxxxxxx.....",
-  "....xxxxxxxx.....",
-  "....xxxxxxx......",
-  "....xxxxxxx......",
-  "....xxxxxxxx.....",
-  "....xxxxxxxx.....",
-  ".....xxxxxxxxx...",
-  ".....xxxxxxxxxx..",
-  "......xxxxxxxxx..",
-  "......xxxxxxxxx..",
-  ".......xxxxxx....",
-  ".......xx........",
-];
-const dinoJump = [
-  ".....xxxxx.......",
-  "....xxxxxxx......",
-  "....xxxxxxxx.....",
-  "....xxxxxxxx.....",
-  "....xxxxxxxx.....",
-  "....xxxxxxx......",
-  "....xxxxxxx......",
-  "....xxxxxxxx.....",
-  "....xxxxxxxx.....",
-  ".....xxxxxxxxx...",
-  ".....xxxxxxxxxx..",
-  "......xxxxxxxxx..",
-  "......xxxxxxxxx..",
-  ".......xxxxxx....",
-  "........xxxx.....",
-];
+// ─── DRAW DINO (programmatic pixel art) ───
+function drawDino(dx, dy, runFrame, jumping) {
+  const P = 3; // pixel unit
+  const cBody = '#535353';
+  const cDark = '#3c3c3c';
 
-const cactusTall = [
-  "..xx..","..xx..","..xx..","..xx..",
-  "xx.xxx","xx.xxx","xx.xxx","xx.xxx",
-  "..xx..","..xx..","..xx..","..xx..",
-  "..xx..","..xx..","..xx..",
-];
-const cactusShort = [
-  "..xx..","..xx..",
-  "xxx.xx","xxx.xx",
-  "..xx..","..xx..",
-  "..xx..","..xx..","..xx..",
-];
-const rockSprite = [
-  "....xxxx....",
-  "...xxxxxx...",
-  "..xxxxxxxx..",
-  ".xxxxxxxxxx.",
-  "xxxxxxxxxxxx",
-  "xxxxxxxxxxxx",
-  "xxxxxxxxxxxx",
-];
+  ctx.fillStyle = cBody;
 
-function drawSprite(sprite, sx, sy, color='#535353') {
-  ctx.fillStyle = color;
-  for (let r=0; r<sprite.length; r++) {
-    for (let c=0; c<sprite[r].length; c++) {
-      if (sprite[r][c]==='x') ctx.fillRect(sx+c*PX, sy+r*PX, PX, PX);
-    }
+  // ── HEAD ──
+  // main head block
+  ctx.fillRect(dx+21, dy-48, 15, 15);
+  // head top bump
+  ctx.fillRect(dx+18, dy-51, 6, 3);
+  // snout extension
+  ctx.fillRect(dx+33, dy-42, 6, 6);
+  // lower jaw
+  ctx.fillRect(dx+15, dy-36, 21, 6);
+  // jaw corner
+  ctx.fillRect(dx+12, dy-33, 6, 3);
+
+  // ── BODY ──
+  // main torso
+  ctx.fillRect(dx+3, dy-30, 27, 15);
+  // upper back curve
+  ctx.fillRect(dx-3, dy-24, 12, 9);
+  // lower belly
+  ctx.fillRect(dx+6, dy-18, 18, 6);
+
+  // ── TAIL ──
+  ctx.fillRect(dx-9, dy-21, 9, 6);
+  ctx.fillRect(dx-15, dy-18, 9, 4);
+  ctx.fillRect(dx-21, dy-16, 9, 3);
+  // tail tip
+  ctx.fillRect(dx-24, dy-15, 6, 2);
+
+  // ── SPIKES (back ridges) ──
+  ctx.fillStyle = cDark;
+  ctx.fillRect(dx+0, dy-33, 3, 3);
+  ctx.fillRect(dx-3, dy-27, 3, 3);
+
+  // ── ARM ──
+  ctx.fillStyle = cBody;
+  ctx.fillRect(dx+12, dy-21, 4, 9);
+
+  // ── LEGS ──
+  const legW = 6, legH = 12;
+  ctx.fillStyle = cBody;
+  if (jumping) {
+    // tucked legs
+    ctx.fillRect(dx+6, dy-15, legW, 5);
+    ctx.fillRect(dx+18, dy-15, legW, 5);
+  } else if (runFrame) {
+    // stride: one forward, one back
+    ctx.fillRect(dx+3, dy-15, legW, legH-3);   // back
+    ctx.fillRect(dx+21, dy-15, legW, legH);     // front
+  } else {
+    // stride reversed
+    ctx.fillRect(dx+3, dy-15, legW, legH);
+    ctx.fillRect(dx+21, dy-15, legW, legH-3);
   }
+
+  // ── EYE ──
+  const eyeX = dx+24, eyeY = dy-45;
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(eyeX, eyeY, 7, 7);
+  ctx.fillStyle = '#000';
+  ctx.fillRect(eyeX+2, eyeY+2, 3, 3);
+
+  // ── MOUTH LINE ──
+  ctx.fillStyle = cDark;
+  ctx.fillRect(dx+18, dy-34, 15, 2);
+}
+
+// ─── DRAW OBSTACLE SPRITES ───
+function drawCactusTall(x) {
+  const P = 3, by = GROUND_Y;
+  ctx.fillStyle = '#535353';
+  // main trunk
+  ctx.fillRect(x+9, by-48, 6, 48);
+  // left arm
+  ctx.fillRect(x, by-36, 9, 6);
+  ctx.fillRect(x, by-42, 6, 9);
+  // right arm
+  ctx.fillRect(x+15, by-39, 9, 6);
+  ctx.fillRect(x+18, by-45, 6, 9);
+  // top
+  ctx.fillRect(x+9, by-51, 6, 3);
+}
+
+function drawCactusShort(x) {
+  const P = 3, by = GROUND_Y;
+  ctx.fillStyle = '#535353';
+  ctx.fillRect(x+9, by-30, 6, 30);
+  ctx.fillRect(x, by-21, 9, 6);
+  ctx.fillRect(x+15, by-24, 9, 6);
+  ctx.fillRect(x+9, by-33, 6, 3);
+}
+
+function drawRock(x) {
+  const P = 3, by = GROUND_Y;
+  ctx.fillStyle = '#888';
+  ctx.beginPath();
+  ctx.moveTo(x, by);
+  ctx.lineTo(x+6, by-21);
+  ctx.lineTo(x+12, by-30);
+  ctx.lineTo(x+21, by-30);
+  ctx.lineTo(x+27, by-21);
+  ctx.lineTo(x+33, by-9);
+  ctx.lineTo(x+36, by);
+  ctx.fill();
+  ctx.fillStyle = '#999';
+  ctx.fillRect(x+9, by-18, 15, 9);
 }
 
 // ─── DRAW ───
@@ -198,7 +219,8 @@ function drawGround() {
   ctx.fillStyle = '#535353';
   ctx.fillRect(0, GROUND_Y+2, GAME_W, 2);
   ctx.fillStyle = '#aaa';
-  for (let i=(frame*getSpeed())%30; i<GAME_W; i+=30) ctx.fillRect(i, GROUND_Y+4, 12, 1);
+  const spd = getSpeed();
+  for (let i=(frame*spd)%30; i<GAME_W; i+=30) ctx.fillRect(i, GROUND_Y+4, 12, 1);
 }
 
 function drawScene() {
@@ -206,12 +228,12 @@ function drawScene() {
   drawGround();
 
   const runFrame = Math.floor(frame/6)%2===0;
-  const sprite = dino.jumping ? dinoJump : (runFrame ? dinoRun1 : dinoRun2);
-  drawSprite(sprite, dino.x, dino.y - sprite.length*PX, '#535353');
+  drawDino(dino.x, dino.y, runFrame, dino.jumping);
 
   for (let o of obstacles) {
-    const clr = o.type==='rock'?'#888':'#535353';
-    drawSprite(o.sprite, o.x, GROUND_Y - o.sprite.length*PX, clr);
+    if (o.type==='cactusTall') drawCactusTall(o.x);
+    else if (o.type==='cactusShort') drawCactusShort(o.x);
+    else drawRock(o.x);
   }
   for (let p of particles) {
     ctx.fillStyle = `rgba(83,83,83,${p.life/p.maxLife})`;
@@ -225,12 +247,12 @@ function drawOverlay() {
   ctx.textAlign = 'center';
 
   if (gameState==='waiting') {
-    drawSprite(dinoRun1, GAME_W/2-30, GAME_H/2-60, '#535353');
+    drawDino(GAME_W/2-21, GROUND_Y, true, false);
     ctx.fillStyle = '#535353';
     ctx.font = 'bold 22px "Courier New"';
-    ctx.fillText('DINO RUNNER', GAME_W/2, GAME_H/2-80);
+    ctx.fillText('DINO RUNNER', GAME_W/2, GROUND_Y-80);
     ctx.font = '13px "Courier New"';
-    ctx.fillText('TAP TO START', GAME_W/2, GAME_H/2+20);
+    ctx.fillText('TAP TO START', GAME_W/2, GROUND_Y+10);
   } else if (gameState==='stageClear') {
     ctx.fillStyle = '#535353';
     ctx.font = 'bold 20px "Courier New"';
@@ -249,12 +271,14 @@ function drawOverlay() {
   ctx.textAlign = 'start';
 }
 
-// ─── STAGE CONFIG ───
+// ─── STAGE CONFIG (easier early stages) ───
 function getSpeed() {
-  return [5,5.5,6,6.5,7,7.5,8,8.5,9.5,10.5][Math.min(stage-1,9)];
+  // Stage 1 starts slow at 3.5, gradually to 9
+  return [3.5, 4.0, 4.5, 5.0, 5.5, 6.0, 6.5, 7.5, 8.5, 9.0][Math.min(stage-1,9)];
 }
 function getGap() {
-  const g = [[130,200],[120,180],[110,170],[100,155],[90,145],[80,135],[70,125],[65,115],[60,110],[55,100]][Math.min(stage-1,9)];
+  // Wider gaps in early stages
+  const g = [[180,280],[170,260],[150,240],[130,210],[110,190],[95,170],[80,150],[70,135],[60,120],[55,105]][Math.min(stage-1,9)];
   return g[0]+Math.random()*(g[1]-g[0]);
 }
 
@@ -262,33 +286,40 @@ function maybeSpawnObstacle() {
   obstacleTimer--;
   if (obstacleTimer > 0) return;
   const gap = getGap();
-  if (obstacles.length>0 && obstacles[obstacles.length-1].x + obstacles[obstacles.length-1].w + gap > GAME_W) return;
-  const types = stage<=3?['cactusTall','cactusShort']:stage<=6?['cactusTall','cactusShort','cactusShort']:['cactusTall','cactusShort','rock'];
+  if (obstacles.length>0) {
+    const last = obstacles[obstacles.length-1];
+    if (last.x + last.w + gap > GAME_W) return;
+  }
+  const types = stage<=3?['cactusShort']:stage<=5?['cactusShort','cactusTall']:stage<=7?['cactusTall','cactusShort','cactusShort']:['cactusTall','cactusShort','rock'];
   const t = types[Math.floor(Math.random()*types.length)];
-  const sp = t==='cactusTall'?cactusTall:t==='cactusShort'?cactusShort:rockSprite;
-  obstacles.push({x:GAME_W, type:t, sprite:sp, w:sp[0].length*PX, h:sp.length*PX, passed:false});
-  obstacleTimer = 15+Math.floor(Math.random()*10);
+  const widths = {cactusTall:72, cactusShort:72, rock:108};
+  obstacles.push({x:GAME_W, type:t, w:widths[t], passed:false});
+  // Longer delay between obstacles in early stages
+  const delay = stage<=3 ? 25+Math.floor(Math.random()*15) : stage<=6 ? 18+Math.floor(Math.random()*12) : 12+Math.floor(Math.random()*10);
+  obstacleTimer = delay;
 }
 
 // ─── COLLISION ───
 function checkCollision() {
-  const dB = {x:dino.x+8, y:dino.y-35, w:dino.w-16, h:35};
+  const dB = {x:dino.x+8, y:dino.y-40, w:36, h:38};
   for (let o of obstacles) {
-    const oB = {x:o.x+4, y:GROUND_Y-o.h, w:o.w-8, h:o.h};
+    const oB = {x:o.x+4, y:GROUND_Y-48, w:o.w-8, h:48};
+    if (o.type==='cactusShort') oB.y = GROUND_Y-30;
+    if (o.type==='rock') { oB.y = GROUND_Y-30; oB.h = 30; }
     if (dB.x<oB.x+oB.w && dB.x+dB.w>oB.x && dB.y<oB.y+oB.h && dB.y+dB.h>oB.y) return true;
   }
   return false;
 }
 
 function spawnParticles(x,y) {
-  for (let i=0;i<12;i++) particles.push({
+  for (let i=0;i<15;i++) particles.push({
     x,y, vx:(Math.random()-.5)*3, vy:-2-Math.random()*3,
-    life:20+Math.random()*15, maxLife:35, size:PX*(1+Math.floor(Math.random()*2))
+    life:20+Math.random()*15, maxLife:35, size:2+Math.floor(Math.random()*4)
   });
 }
 
 // ─── UPDATE ───
-const OBS_CLEAR = 10;
+const OBS_CLEAR = 7; // fewer obstacles per stage
 function update() {
   if (gameState!=='playing') return;
   frame++;
@@ -301,11 +332,14 @@ function update() {
 
   maybeSpawnObstacle();
   const spd = getSpeed();
-  for (let o of obstacles) { o.x -= spd; if (!o.passed && o.x+o.w<dino.x) { o.passed=true; obstaclesPassed++; score+=10; } }
-  obstacles = obstacles.filter(o=>o.x+o.w>-60);
+  for (let o of obstacles) {
+    o.x -= spd;
+    if (!o.passed && o.x+o.w<dino.x) { o.passed=true; obstaclesPassed++; score+=10; }
+  }
+  obstacles = obstacles.filter(o=>o.x+o.w>-80);
 
   if (checkCollision()) {
-    gameState='gameOver'; spawnParticles(dino.x+21, dino.y-22);
+    gameState='gameOver'; spawnParticles(dino.x+21, dino.y-25);
     if (score>hiScore) { hiScore=score; localStorage.setItem('dinoHi',hiScore); }
   }
   if (obstaclesPassed>=OBS_CLEAR) { gameState='stageClear'; if (stage<10) stage++; }
@@ -323,14 +357,14 @@ function loop() { update(); draw(); requestAnimationFrame(loop); }
 // ─── RESET ───
 function resetGame(full) {
   if (full) { stage=1; score=0; }
-  obstaclesPassed=0; obstacles=[]; particles=[]; obstacleTimer=30;
+  obstaclesPassed=0; obstacles=[]; particles=[]; obstacleTimer=40;
   dino.y=GROUND_Y; dino.vy=0; dino.jumping=false;
   document.getElementById('score').textContent='00000';
   document.getElementById('hi').textContent=String(hiScore).padStart(5,'0');
   document.getElementById('stg').textContent=stage;
 }
 
-// ─── INPUT (touch + keyboard) ───
+// ─── INPUT ───
 function doJump() {
   if (gameState==='waiting') { gameState='playing'; resetGame(true); return; }
   if (gameState==='stageClear') { resetGame(false); gameState='playing'; return; }
@@ -341,19 +375,11 @@ function doJump() {
   }
 }
 
-// Prevent double-tap zoom, pull-to-refresh
-document.addEventListener('touchstart', e => {
-  e.preventDefault();
-  doJump();
-}, {passive:false});
-
+document.addEventListener('touchstart', e => { e.preventDefault(); doJump(); }, {passive:false});
 document.addEventListener('keydown', e => {
   if (e.code==='Space'||e.code==='ArrowUp') { e.preventDefault(); doJump(); }
 });
-
 canvas.addEventListener('click', e => { e.preventDefault(); doJump(); });
-
-// Prevent scrolling
 document.addEventListener('gesturestart', e=>e.preventDefault());
 document.addEventListener('gesturechange', e=>e.preventDefault());
 document.addEventListener('gestureend', e=>e.preventDefault());
