@@ -289,7 +289,7 @@ function maybeSpawnObstacle() {
   }
   const types = stage<=3?['cactusShort']:stage<=5?['cactusShort','cactusTall']:stage<=7?['cactusTall','cactusShort','cactusShort']:['cactusTall','cactusShort','rock'];
   const t = types[Math.floor(Math.random()*types.length)];
-  const widths = {cactusTall:72, cactusShort:72, rock:108};
+  const widths = {cactusTall:48, cactusShort:42, rock:54};
   obstacles.push({x:GAME_W, type:t, w:widths[t], passed:false});
   // Longer delay between obstacles in early stages
   const delay = stage<=3 ? 25+Math.floor(Math.random()*15) : stage<=6 ? 18+Math.floor(Math.random()*12) : 12+Math.floor(Math.random()*10);
@@ -298,12 +298,13 @@ function maybeSpawnObstacle() {
 
 // ─── COLLISION ───
 function checkCollision() {
-  // Tight hitbox — body core only, generous margins
-  const dB = {x:dino.x+16, y:dino.y-34, w:20, h:30};
+  // Tiny hitboxes — only center core of each object counts
+  const dB = {x:dino.x+18, y:dino.y-32, w:16, h:28};
   for (let o of obstacles) {
-    const oB = {x:o.x+10, y:GROUND_Y-42, w:o.w-20, h:42};
-    if (o.type==='cactusShort') { oB.y = GROUND_Y-26; oB.h = 26; }
-    if (o.type==='rock') { oB.y = GROUND_Y-26; oB.h = 26; oB.x = o.x+14; oB.w = o.w-28; }
+    let oB;
+    if (o.type==='cactusTall')   oB = {x:o.x+10, y:GROUND_Y-42, w:10, h:42};
+    else if (o.type==='cactusShort') oB = {x:o.x+9, y:GROUND_Y-24, w:10, h:24};
+    else /* rock */               oB = {x:o.x+16, y:GROUND_Y-24, w:14, h:24};
     if (dB.x<oB.x+oB.w && dB.x+dB.w>oB.x && dB.y<oB.y+oB.h && dB.y+dB.h>oB.y) return true;
   }
   return false;
