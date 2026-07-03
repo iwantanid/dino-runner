@@ -298,11 +298,12 @@ function maybeSpawnObstacle() {
 
 // ─── COLLISION ───
 function checkCollision() {
-  const dB = {x:dino.x+14, y:dino.y-38, w:28, h:36};
+  // Tight hitbox — body core only, generous margins
+  const dB = {x:dino.x+16, y:dino.y-34, w:20, h:30};
   for (let o of obstacles) {
-    const oB = {x:o.x+4, y:GROUND_Y-48, w:o.w-8, h:48};
-    if (o.type==='cactusShort') oB.y = GROUND_Y-30;
-    if (o.type==='rock') { oB.y = GROUND_Y-30; oB.h = 30; }
+    const oB = {x:o.x+10, y:GROUND_Y-42, w:o.w-20, h:42};
+    if (o.type==='cactusShort') { oB.y = GROUND_Y-26; oB.h = 26; }
+    if (o.type==='rock') { oB.y = GROUND_Y-26; oB.h = 26; oB.x = o.x+14; oB.w = o.w-28; }
     if (dB.x<oB.x+oB.w && dB.x+dB.w>oB.x && dB.y<oB.y+oB.h && dB.y+dB.h>oB.y) return true;
   }
   return false;
