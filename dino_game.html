@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>DINO RUNNER</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html, body {
+    width:100%; height:100%; overflow:hidden;
+    background:#fff; touch-action:manipulation;
+    -webkit-tap-highlight-color:transparent;
+    -webkit-user-select:none; user-select:none;
+    font-family:'Courier New',monospace;
+    position:fixed; top:0; left:0;
+  }
+  canvas {
+    display:block; position:absolute; top:50%; left:50%;
+    transform:translate(-50%,-50%);
+    image-rendering:crisp-edges; image-rendering:pixelated;
+    background:#fff;
+  }
+  #ui {
+    position:absolute; top:0; right:0;
+    padding:8px 12px; font-size:12px; color:#aaa;
+    text-align:right; pointer-events:none;
+    letter-spacing:1px;
+  }
+  #ui div { line-height:1.6; }
+  #ui span { color:#535353; font-weight:bold; }
+  #overlay {
+    position:absolute; top:0; left:0; width:100%; height:100%;
+    display:flex; flex-direction:column; align-items:center;
+    justify-content:center;
+    pointer-events:none; z-index:10;
+  }
+  #msg {
+    text-align:center; color:#535353;
+    font-family:'Courier New',monospace;
+  }
+  #msg .title { font-size:clamp(16px,4vw,28px); font-weight:bold; letter-spacing:3px; margin-bottom:8px; }
+  #msg .sub { font-size:clamp(10px,2.5vw,16px); letter-spacing:1px; }
+  .hidden { display:none !important; }
+</style>
+</head>
+<body>
+<canvas id="game"></canvas>
+<div id="ui">
+  <div>HI <span id="hi">00000</span></div>
+  <div><span id="score">00000</span></div>
+  <div>STAGE <span id="stg">1</span></div>
+</div>
+<div id="overlay">
+  <div id="msg">
+    <div class="title" id="msgTitle"></div>
+    <div class="sub" id="msgSub"></div>
+  </div>
+</div>
+
+<script>
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+
+// ─── GAME STATE ───
+let gameState = 'waiting'; // waiting|playing|stageClear|gameOver
+let stage = 1, score = 0, obstaclesPassed = 0;
+let hiScore = parseInt(localStorage.getItem('dinoHi')||'0');
+let frame = 0, obstacleTimer = 0;
+let obstacles = [], particles = [];
+
+// ─── RESIZE: fill landscape viewport ───
+const GAME_W = 900, GAME_H = 300;
+let scale = 1, offX = 0, offY = 0;
+
+function resize() {
+  const vw = window.innerWidth, vh = window.innerHeight;
+  // landscape ratio: 900:300 = 3:1
+  let w, h;
+  if (vw / vh > GAME_W / GAME_H) {
+    // viewport wider than game → fit height
+    h = vh * 0.88;
+    w = h * (GAME_W / GAME_H);
+  } else {
+    // viewport taller than game → fit width
+    w = vw * 0.96;
+    h = w * (GAME_H / GAME_W);
+  }
+  // ensure min size
+  if (w < 320) { w = 320; h = w * (GAME_H/GAME_W); }
+  canvas.style.width = w + 'px';
+  canvas.style.height = h + 'px';
+  canvas.width = GAME_W;
+  canvas.height = GAME_H;
+  scale = w / GAME_W;
+}
+window.addEventListener('resize', resize);
+window.addEventListener('orientationchange', () => setTimeout(resize, 100));
+resize();
+
+// ─── GAME CONSTANTS ───
+const GROUND_Y = 245;
+const PX = 3;
+
+const dino = {
+  x: 70, y: GROUND_Y, w: 42, h: 45,
+  vy: 0, jumping: false,
+  jumpPower: -10.5, gravity: 0.55
+};
+
+// ─── PIXEL SPRITES ───
+const dinoRun1 = [
+  ".....xxxxx.......",
+  "....xxxxxxx......",
+  "....xxxxxxxx.....",
+  "....xxxxxxxx.....",
+  "....xxxxxxxx.....",
+  "....xxxxxxx......",
+  "....xxxxxxx......",
+  "....xxxxxxxx.....",
+  "....xxxxxxxx.....",
+  ".....xxxxxxxxx...",
+  ".....xxxxxxxxxx..",
+  "......xxxxxxxxx..",
+  "......xxxxxxxxx..",
+  ".......xxxxxx....",
+  "........xxxx.....",
+];
+const dinoRun2 = [
+  ".....xxxxx.......",
+  "....xxxxxxx......",
+  "....xxxxxxxx.....",
+  "....xxxxxxxx.....",
+  "....xxxxxxxx.....",
+  "....xxxxxxx......",
+  "....xxxxxxx......",
+  "....xxxxxxxx.....",
+  "....xxxxxxxx.....",
+  ".....xxxxxxxxx...",
+  ".....xxxxxxxxxx..",
+  "......xxxxxxxxx..",
+  "......xxxxxxxxx..",
+  ".......xxxxxx....",
+  ".......xx........",
+];
+const dinoJump = [
+  ".....xxxxx.......",
+  "....xxxxxxx......",
+  "....xxxxxxxx.....",
+  "....xxxxxxxx.....",
+  "....xxxxxxxx.....",
+  "....xxxxxxx......",
+  "....xxxxxxx......",
+  "....xxxxxxxx.....",
+  "....xxxxxxxx.....",
+  ".....xxxxxxxxx...",
+  ".....xxxxxxxxxx..",
+  "......xxxxxxxxx..",
+  "......xxxxxxxxx..",
+  ".......xxxxxx....",
+  "........xxxx.....",
+];
+
+const cactusTall = [
+  "..xx..","..xx..","..xx..","..xx..",
+  "xx.xxx","xx.xxx","xx.xxx","xx.xxx",
+  "..xx..","..xx..","..xx..","..xx..",
+  "..xx..","..xx..","..xx..",
+];
+const cactusShort = [
+  "..xx..","..xx..",
+  "xxx.xx","xxx.xx",
+  "..xx..","..xx..",
+  "..xx..","..xx..","..xx..",
+];
+const rockSprite = [
+  "....xxxx....",
+  "...xxxxxx...",
+  "..xxxxxxxx..",
+  ".xxxxxxxxxx.",
+  "xxxxxxxxxxxx",
+  "xxxxxxxxxxxx",
+  "xxxxxxxxxxxx",
+];
+
+function drawSprite(sprite, sx, sy, color='#535353') {
+  ctx.fillStyle = color;
+  for (let r=0; r<sprite.length; r++) {
+    for (let c=0; c<sprite[r].length; c++) {
+      if (sprite[r][c]==='x') ctx.fillRect(sx+c*PX, sy+r*PX, PX, PX);
+    }
+  }
+}
+
+// ─── DRAW ───
+function drawGround() {
+  ctx.fillStyle = '#535353';
+  ctx.fillRect(0, GROUND_Y+2, GAME_W, 2);
+  ctx.fillStyle = '#aaa';
+  for (let i=(frame*getSpeed())%30; i<GAME_W; i+=30) ctx.fillRect(i, GROUND_Y+4, 12, 1);
+}
+
+function drawScene() {
+  ctx.clearRect(0, 0, GAME_W, GAME_H);
+  drawGround();
+
+  const runFrame = Math.floor(frame/6)%2===0;
+  const sprite = dino.jumping ? dinoJump : (runFrame ? dinoRun1 : dinoRun2);
+  drawSprite(sprite, dino.x, dino.y - sprite.length*PX, '#535353');
+
+  for (let o of obstacles) {
+    const clr = o.type==='rock'?'#888':'#535353';
+    drawSprite(o.sprite, o.x, GROUND_Y - o.sprite.length*PX, clr);
+  }
+  for (let p of particles) {
+    ctx.fillStyle = `rgba(83,83,83,${p.life/p.maxLife})`;
+    ctx.fillRect(p.x, p.y, p.size, p.size);
+  }
+}
+
+function drawOverlay() {
+  ctx.fillStyle = 'rgba(255,255,255,0.88)';
+  ctx.fillRect(0, 0, GAME_W, GAME_H);
+  ctx.textAlign = 'center';
+
+  if (gameState==='waiting') {
+    drawSprite(dinoRun1, GAME_W/2-30, GAME_H/2-60, '#535353');
+    ctx.fillStyle = '#535353';
+    ctx.font = 'bold 22px "Courier New"';
+    ctx.fillText('DINO RUNNER', GAME_W/2, GAME_H/2-80);
+    ctx.font = '13px "Courier New"';
+    ctx.fillText('TAP TO START', GAME_W/2, GAME_H/2+20);
+  } else if (gameState==='stageClear') {
+    ctx.fillStyle = '#535353';
+    ctx.font = 'bold 20px "Courier New"';
+    ctx.fillText(`STAGE ${stage-1} CLEAR!`, GAME_W/2, GAME_H/2-15);
+    ctx.font = '13px "Courier New"';
+    ctx.fillText('TAP FOR NEXT STAGE', GAME_W/2, GAME_H/2+20);
+  } else if (gameState==='gameOver') {
+    ctx.fillStyle = '#535353';
+    ctx.font = 'bold 24px "Courier New"';
+    ctx.fillText('G A M E  O V E R', GAME_W/2, GAME_H/2-15);
+    ctx.font = '13px "Courier New"';
+    ctx.fillText(`SCORE: ${score}  HI: ${hiScore}`, GAME_W/2, GAME_H/2+15);
+    ctx.font = '12px "Courier New"';
+    ctx.fillText('TAP TO RESTART', GAME_W/2, GAME_H/2+38);
+  }
+  ctx.textAlign = 'start';
+}
+
+// ─── STAGE CONFIG ───
+function getSpeed() {
+  return [5,5.5,6,6.5,7,7.5,8,8.5,9.5,10.5][Math.min(stage-1,9)];
+}
+function getGap() {
+  const g = [[130,200],[120,180],[110,170],[100,155],[90,145],[80,135],[70,125],[65,115],[60,110],[55,100]][Math.min(stage-1,9)];
+  return g[0]+Math.random()*(g[1]-g[0]);
+}
+
+function maybeSpawnObstacle() {
+  obstacleTimer--;
+  if (obstacleTimer > 0) return;
+  const gap = getGap();
+  if (obstacles.length>0 && obstacles[obstacles.length-1].x + obstacles[obstacles.length-1].w + gap > GAME_W) return;
+  const types = stage<=3?['cactusTall','cactusShort']:stage<=6?['cactusTall','cactusShort','cactusShort']:['cactusTall','cactusShort','rock'];
+  const t = types[Math.floor(Math.random()*types.length)];
+  const sp = t==='cactusTall'?cactusTall:t==='cactusShort'?cactusShort:rockSprite;
+  obstacles.push({x:GAME_W, type:t, sprite:sp, w:sp[0].length*PX, h:sp.length*PX, passed:false});
+  obstacleTimer = 15+Math.floor(Math.random()*10);
+}
+
+// ─── COLLISION ───
+function checkCollision() {
+  const dB = {x:dino.x+8, y:dino.y-35, w:dino.w-16, h:35};
+  for (let o of obstacles) {
+    const oB = {x:o.x+4, y:GROUND_Y-o.h, w:o.w-8, h:o.h};
+    if (dB.x<oB.x+oB.w && dB.x+dB.w>oB.x && dB.y<oB.y+oB.h && dB.y+dB.h>oB.y) return true;
+  }
+  return false;
+}
+
+function spawnParticles(x,y) {
+  for (let i=0;i<12;i++) particles.push({
+    x,y, vx:(Math.random()-.5)*3, vy:-2-Math.random()*3,
+    life:20+Math.random()*15, maxLife:35, size:PX*(1+Math.floor(Math.random()*2))
+  });
+}
+
+// ─── UPDATE ───
+const OBS_CLEAR = 10;
+function update() {
+  if (gameState!=='playing') return;
+  frame++;
+
+  if (dino.jumping) {
+    dino.vy += dino.gravity;
+    dino.y += dino.vy;
+    if (dino.y>=GROUND_Y) { dino.y=GROUND_Y; dino.vy=0; dino.jumping=false; }
+  }
+
+  maybeSpawnObstacle();
+  const spd = getSpeed();
+  for (let o of obstacles) { o.x -= spd; if (!o.passed && o.x+o.w<dino.x) { o.passed=true; obstaclesPassed++; score+=10; } }
+  obstacles = obstacles.filter(o=>o.x+o.w>-60);
+
+  if (checkCollision()) {
+    gameState='gameOver'; spawnParticles(dino.x+21, dino.y-22);
+    if (score>hiScore) { hiScore=score; localStorage.setItem('dinoHi',hiScore); }
+  }
+  if (obstaclesPassed>=OBS_CLEAR) { gameState='stageClear'; if (stage<10) stage++; }
+
+  particles = particles.filter(p=>{p.x+=p.vx;p.y+=p.vy;p.life--;return p.life>0;});
+
+  document.getElementById('score').textContent = String(score).padStart(5,'0');
+  document.getElementById('hi').textContent = String(hiScore).padStart(5,'0');
+  document.getElementById('stg').textContent = Math.min(stage,10);
+}
+
+function draw() { drawScene(); if (gameState!=='playing') drawOverlay(); }
+function loop() { update(); draw(); requestAnimationFrame(loop); }
+
+// ─── RESET ───
+function resetGame(full) {
+  if (full) { stage=1; score=0; }
+  obstaclesPassed=0; obstacles=[]; particles=[]; obstacleTimer=30;
+  dino.y=GROUND_Y; dino.vy=0; dino.jumping=false;
+  document.getElementById('score').textContent='00000';
+  document.getElementById('hi').textContent=String(hiScore).padStart(5,'0');
+  document.getElementById('stg').textContent=stage;
+}
+
+// ─── INPUT (touch + keyboard) ───
+function doJump() {
+  if (gameState==='waiting') { gameState='playing'; resetGame(true); return; }
+  if (gameState==='stageClear') { resetGame(false); gameState='playing'; return; }
+  if (gameState==='gameOver') { resetGame(true); gameState='playing'; return; }
+  if (gameState==='playing' && !dino.jumping) {
+    dino.vy = dino.jumpPower;
+    dino.jumping = true;
+  }
+}
+
+// Prevent double-tap zoom, pull-to-refresh
+document.addEventListener('touchstart', e => {
+  e.preventDefault();
+  doJump();
+}, {passive:false});
+
+document.addEventListener('keydown', e => {
+  if (e.code==='Space'||e.code==='ArrowUp') { e.preventDefault(); doJump(); }
+});
+
+canvas.addEventListener('click', e => { e.preventDefault(); doJump(); });
+
+// Prevent scrolling
+document.addEventListener('gesturestart', e=>e.preventDefault());
+document.addEventListener('gesturechange', e=>e.preventDefault());
+document.addEventListener('gestureend', e=>e.preventDefault());
+
+resetGame(true);
+loop();
+</script>
+</body>
+</html>
