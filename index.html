@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>DINO RUNNER v8</title>
+<title>DINO RUNNER v9</title>
 <style>
   * { margin:0; padding:0; box-sizing:border-box; }
   html, body {
@@ -47,7 +47,7 @@
   <div>HI <span id="hi">00000</span></div>
   <div><span id="score">00000</span></div>
   <div>STAGE <span id="stg">1</span></div>
-  <div style="font-size:8px;color:#ccc;margin-top:2px;">v8</div>
+  <div style="font-size:8px;color:#ccc;margin-top:2px;">v9</div>
 </div>
 <div id="overlay">
   <div id="msg">
@@ -187,8 +187,14 @@ function drawDino(dx, dy, runFrame, jumping) {
 }
 
 // ─── DRAW BG ───
+// Stage-specific background colors (subtle grayscale)
+const STAGE_BG = ['#f0f4f8','#f2f0ec','#edf2ea','#f5f0e8','#eceef0','#f0eeec','#e8eaee','#eae9ed','#eee8e4','#eceff4'];
+const STAGE_SKY = ['#e8ecf0','#e6ddd4','#dce8da','#e8dcc8','#dde0e4','#e8dcd4','#d4d8e0','#c8c4d0','#e0d4cc','#dce0e8'];
+
 function drawMountains() {
-  ctx.fillStyle = '#e8ecf0';
+  const s = Math.min(stage-1, 9);
+  // base mountains (all stages)
+  ctx.fillStyle = STAGE_BG[s];
   for (let m of mountains) {
     const mx = m.x, my = GROUND_Y - 10;
     ctx.beginPath();
@@ -196,13 +202,110 @@ function drawMountains() {
     ctx.lineTo(mx + m.w/2, my - m.h);
     ctx.lineTo(mx + m.w, my);
     ctx.fill();
-    ctx.fillStyle = '#dde2e8';
+    ctx.fillStyle = STAGE_SKY[s];
     ctx.beginPath();
     ctx.moveTo(mx + m.w*0.25, my);
     ctx.lineTo(mx + m.w/2, my - m.h + 15);
     ctx.lineTo(mx + m.w*0.65, my);
     ctx.fill();
-    ctx.fillStyle = '#e8ecf0';
+    ctx.fillStyle = STAGE_BG[s];
+  }
+}
+
+function drawStageScenery() {
+  const s = Math.min(stage-1, 9);
+  const spd = getSpeed();
+  ctx.fillStyle = '#999';
+
+  if (s === 0) { // 초원의 시작 — grass tufts, distant hills
+    for (let i=0; i<8; i++) {
+      const gx = ((i*120 - frame*spd*0.2) % (GAME_W+200)) - 40;
+      ctx.fillStyle = '#999';
+      ctx.beginPath(); ctx.moveTo(gx,GROUND_Y-3); ctx.lineTo(gx+4,GROUND_Y-15); ctx.lineTo(gx+8,GROUND_Y-3); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(gx+6,GROUND_Y-3); ctx.lineTo(gx+10,GROUND_Y-20); ctx.lineTo(gx+14,GROUND_Y-3); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(gx+10,GROUND_Y-3); ctx.lineTo(gx+14,GROUND_Y-12); ctx.lineTo(gx+18,GROUND_Y-3); ctx.fill();
+    }
+  } else if (s === 1) { // 선인장 지대 — sparse desert shrubs, sun
+    ctx.fillStyle = '#bbb';
+    ctx.beginPath(); ctx.arc(750, 50, 35, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#ddd';
+    ctx.beginPath(); ctx.arc(750, 50, 28, 0, Math.PI*2); ctx.fill();
+  } else if (s === 2) { // 숲속 모험 — distant trees, bushes
+    for (let i=0; i<6; i++) {
+      const tx = ((i*160 - frame*spd*0.3) % (GAME_W+200)) - 40;
+      ctx.fillStyle = '#aaa';
+      ctx.beginPath(); ctx.moveTo(tx,GROUND_Y-2); ctx.lineTo(tx+10,GROUND_Y-35); ctx.lineTo(tx+20,GROUND_Y-2); ctx.fill();
+      ctx.fillStyle = '#bbb';
+      ctx.beginPath(); ctx.moveTo(tx+5,GROUND_Y-2); ctx.lineTo(tx+12,GROUND_Y-25); ctx.lineTo(tx+19,GROUND_Y-2); ctx.fill();
+    }
+  } else if (s === 3) { // 사막 횡단 — sand dunes
+    ctx.fillStyle = '#c8c0b4';
+    for (let i=0; i<4; i++) {
+      const dx = ((i*250 - frame*spd*0.25) % (GAME_W+300)) - 50;
+      ctx.beginPath(); ctx.arc(dx+80, GROUND_Y, 100, Math.PI, 0); ctx.fill();
+    }
+    ctx.fillStyle = '#ddd';
+    ctx.beginPath(); ctx.arc(750, 45, 32, 0, Math.PI*2); ctx.fill();
+  } else if (s === 4) { // 험난한 협곡 — canyon walls
+    ctx.fillStyle = '#888';
+    ctx.beginPath(); ctx.moveTo(0,GROUND_Y-60); ctx.lineTo(60,GROUND_Y-80); ctx.lineTo(120,GROUND_Y-50); ctx.lineTo(140,GROUND_Y); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(GAME_W,GROUND_Y-50); ctx.lineTo(GAME_W-80,GROUND_Y-90); ctx.lineTo(GAME_W-140,GROUND_Y-40); ctx.lineTo(GAME_W-180,GROUND_Y); ctx.fill();
+  } else if (s === 5) { // 화산 지대 — volcano + smoke
+    ctx.fillStyle = '#777';
+    ctx.beginPath(); ctx.moveTo(620,GROUND_Y); ctx.lineTo(680,GROUND_Y-90); ctx.lineTo(740,GROUND_Y); ctx.fill();
+    ctx.fillStyle = '#888';
+    ctx.beginPath(); ctx.moveTo(650,GROUND_Y); ctx.lineTo(680,GROUND_Y-70); ctx.lineTo(720,GROUND_Y); ctx.fill();
+    // smoke puffs
+    for (let i=0; i<5; i++) {
+      const sx = 680 - frame*0.3 + i*20; const sy = GROUND_Y-100 - i*15;
+      ctx.fillStyle = '#ccc'; ctx.beginPath(); ctx.arc(sx,sy, 10+i*4, 0, Math.PI*2); ctx.fill();
+    }
+  } else if (s === 6) { // 어둠의 숲 — spooky dead trees, darker bg
+    ctx.fillStyle = '#666';
+    for (let i=0; i<5; i++) {
+      const tx = ((i*180 - frame*spd*0.3) % (GAME_W+200)) - 40;
+      ctx.fillRect(tx+10, GROUND_Y-50, 4, 50);
+      ctx.beginPath(); ctx.moveTo(tx-2,GROUND_Y-30); ctx.lineTo(tx+12,GROUND_Y-55); ctx.lineTo(tx+20,GROUND_Y-25); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(tx+5,GROUND_Y-20); ctx.lineTo(tx+12,GROUND_Y-40); ctx.lineTo(tx+24,GROUND_Y-18); ctx.fill();
+    }
+  } else if (s === 7) { // 폭풍의 언덕 — dramatic clouds, rain lines
+    ctx.fillStyle = '#999';
+    for (let i=0; i<6; i++) {
+      const cx = ((i*170 - frame*spd*0.2) % (GAME_W+200)) - 40;
+      ctx.beginPath(); ctx.arc(cx, 40, 30, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(cx+25, 50, 25, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(cx-20, 50, 20, 0, Math.PI*2); ctx.fill();
+    }
+    // rain streaks
+    ctx.strokeStyle = 'rgba(150,150,160,0.3)';
+    ctx.lineWidth = 1;
+    for (let i=0; i<30; i++) {
+      const rx = ((i*35 + frame*1.5) % GAME_W); const ry = ((i*23) % (GROUND_Y-60)) + 30;
+      ctx.beginPath(); ctx.moveTo(rx,ry); ctx.lineTo(rx-3,ry+10); ctx.stroke();
+    }
+  } else if (s === 8) { // 용암 협곡 — lava glow at bottom
+    ctx.fillStyle = '#888';
+    ctx.beginPath(); ctx.moveTo(0,GROUND_Y-50); ctx.lineTo(100,GROUND_Y-70); ctx.lineTo(200,GROUND_Y); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(GAME_W,GROUND_Y-40); ctx.lineTo(GAME_W-120,GROUND_Y-80); ctx.lineTo(GAME_W-220,GROUND_Y); ctx.fill();
+    // lava cracks
+    ctx.fillStyle = '#666';
+    for (let i=0; i<4; i++) {
+      const lx = ((i*280 - frame*spd*0.3) % (GAME_W+300)) - 40;
+      ctx.beginPath(); ctx.moveTo(lx,GROUND_Y-2); ctx.lineTo(lx+20,GROUND_Y-8); ctx.lineTo(lx+30,GROUND_Y-3); ctx.fill();
+    }
+  } else if (s === 9) { // 신들의 땅 — pillars, stars
+    ctx.fillStyle = '#999';
+    // pillars
+    for (let i=0; i<3; i++) {
+      const px = 100 + i*300;
+      ctx.fillRect(px, GROUND_Y-70, 12, 70);
+      ctx.fillRect(px-4, GROUND_Y-75, 20, 8);
+    }
+    // distant glow
+    ctx.fillStyle = '#ccc';
+    ctx.beginPath(); ctx.arc(700, 60, 40, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#ddd';
+    ctx.beginPath(); ctx.arc(700, 60, 25, 0, Math.PI*2); ctx.fill();
   }
 }
 
@@ -283,7 +386,12 @@ function drawSpeedLines() {
 // ─── DRAW ───
 function drawScene() {
   ctx.clearRect(0, 0, GAME_W, GAME_H);
+  // stage-tinted background
+  const sbg = STAGE_BG[Math.min(stage-1,9)];
+  ctx.fillStyle = sbg;
+  ctx.fillRect(0, 0, GAME_W, GAME_H);
   drawMountains();
+  drawStageScenery();
   drawGround();
   drawSpeedLines();
 
