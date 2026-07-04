@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>DINO RUNNER v10</title>
+<title>DINO RUNNER v11</title>
 <style>
   * { margin:0; padding:0; box-sizing:border-box; }
   html, body {
@@ -47,7 +47,7 @@
   <div>HI <span id="hi">00000</span></div>
   <div><span id="score">00000</span></div>
   <div>STAGE <span id="stg">1</span></div>
-  <div style="font-size:8px;color:#ccc;margin-top:2px;">v10</div>
+  <div style="font-size:8px;color:#ccc;margin-top:2px;">v11</div>
 </div>
 <div id="overlay">
   <div id="msg">
@@ -95,6 +95,20 @@ resize();
 const GROUND_Y = 250;
 const DINO_X = 65;
 const STAGE_NAMES = ['초원의 시작','선인장 지대','숲속 모험','사막 횡단','험난한 협곡','화산 지대','어둠의 숲','폭풍의 언덕','용암 협곡','신들의 땅'];
+
+// ─── STAGE OBSTACLE THEMES ───
+const STAGE_OBSTACLES = [
+  ['cactusShort'],                          // 1 초원
+  ['cactusShort','cactusTall'],             // 2 선인장
+  ['cactusShort','tree'],                   // 3 숲속
+  ['cactusTall','rock'],                    // 4 사막
+  ['rock','cactusTall','cactusShort'],      // 5 협곡
+  ['rock','cactusTall','cactusTall'],       // 6 화산
+  ['tree','cactusShort','rock'],           // 7 어둠숲
+  ['cactusTall','rock','tree'],            // 8 폭풍
+  ['rock','rock','cactusTall'],            // 9 용암
+  ['tree','rock','cactusTall'],            // 10 신들의 땅
+];
 
 // ─── DINO TYPES ───
 const DINO_TYPES = [
@@ -329,8 +343,7 @@ function drawMountains() {
   }
 }
 
-function drawStageScenery() {
-  const s = Math.min(stage-1, 9);
+function drawStageScenery(s) {
   const spd = getSpeed();
   ctx.fillStyle = '#999';
 
@@ -426,6 +439,29 @@ function drawStageScenery() {
   }
 }
 
+// ─── PARTY BACKGROUND (stage 10 end) ───
+function drawPartyBG(alpha) {
+  // colorful bunting / streamers
+  const colors = ['#ffd700','#ff6b6b','#51cf66','#339af0','#ff922b','#f06595'];
+  for (let i=0; i<8; i++) {
+    const bx = ((i*120 - frame*1.5) % (GAME_W+150)) - 30;
+    const by = 20 + (i%3)*25;
+    ctx.fillStyle = colors[i%6];
+    ctx.globalAlpha = alpha * 0.5;
+    ctx.beginPath(); ctx.arc(bx, by, 12, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(bx+30, by+15, 10, 0, Math.PI*2); ctx.fill();
+  }
+  // sparkles
+  for (let i=0; i<15; i++) {
+    const sx = ((i*65 + frame*2) % GAME_W);
+    const sy = 20 + ((i*37) % (GROUND_Y-60));
+    ctx.fillStyle = colors[i%6];
+    ctx.globalAlpha = alpha * 0.6 * (0.5+Math.sin(frame*0.1+i)*0.5);
+    ctx.fillRect(sx, sy, 3, 3);
+  }
+  ctx.globalAlpha = 1;
+}
+
 // ─── DRAW GROUND DECORATIONS ───
 const pebbles = [];
 for (let i = 0; i < 20; i++) pebbles.push({ x: Math.random()*GAME_W, s: 1+Math.random()*2 });
@@ -503,12 +539,29 @@ function drawSpeedLines() {
 // ─── DRAW ───
 function drawScene() {
   ctx.clearRect(0, 0, GAME_W, GAME_H);
-  // stage-tinted background
-  const sbg = STAGE_BG[Math.min(stage-1,9)];
+  const s = Math.min(stage-1,9);
+  const sbg = STAGE_BG[s];
   ctx.fillStyle = sbg;
   ctx.fillRect(0, 0, GAME_W, GAME_H);
+
+  // Transition progress (last 2 obstacles show next stage's bg)
+  const progress = obstaclesPassed >= OBS_CLEAR-2 ? (obstaclesPassed - (OBS_CLEAR-2)) / 2 : 0;
+  const nextS = Math.min(s+1, 9);
+
   drawMountains();
-  drawStageScenery();
+  drawStageScenery(s);
+
+  // Blend in next stage scenery
+  if (progress > 0 && s < 9) {
+    ctx.globalAlpha = progress;
+    drawStageScenery(nextS);
+    ctx.globalAlpha = 1;
+  }
+
+  // Stage 10: party celebration in the final stretch
+  if (s === 9 && progress > 0) {
+    drawPartyBG(progress);
+  }
   drawGround();
   drawSpeedLines();
 
@@ -596,16 +649,32 @@ function drawOverlay() {
     ctx.font = '11px "Courier New"';
     ctx.fillText('◀ ▶ 로 선택 · TAP TO START', GAME_W/2, GROUND_Y+12);
   } else if (gameState==='stageClear') {
+    if (stage >= 11) {
+      // ── ENDING: ALL STAGES CLEARED! ──
+      ctx.fillStyle = 'rgba(0,0,0,0.75)';
+      ctx.fillRect(0, 0, GAME_W, GAME_H);
+      ctx.fillStyle = '#ffd700';
+      ctx.font = 'bold 30px "Courier New"';
+      ctx.fillText('🎉 ALL CLEAR! 🎉', GAME_W/2, GAME_H/2-35);
+      ctx.fillStyle = '#fff';
+      ctx.font = '15px "Courier New"';
+      ctx.fillText('모든 스테이지를 클리어했습니다!', GAME_W/2, GAME_H/2);
+      ctx.font = '13px "Courier New"';
+      ctx.fillText(`FINAL SCORE: ${score}`, GAME_W/2, GAME_H/2+25);
+      ctx.fillStyle = '#ccc';
+      ctx.font = '12px "Courier New"';
+      ctx.fillText('🦖 🦏 🦅 🦇 THANK YOU FOR PLAYING!', GAME_W/2, GAME_H/2+50);
+      ctx.font = '11px "Courier New"';
+      ctx.fillText('TAP TO PLAY AGAIN', GAME_W/2, GAME_H/2+72);
+    } else {
     // ── CELEBRATION THEME ──
     ctx.fillStyle = 'rgba(255,255,255,0.82)';
     ctx.fillRect(0, 0, GAME_W, GAME_H);
-    // gold banner
     ctx.fillStyle = '#ffd700';
     ctx.fillRect(GAME_W/2-160, GAME_H/2-42, 320, 84);
     ctx.fillStyle = '#b8960f';
     ctx.fillRect(GAME_W/2-160, GAME_H/2-42, 320, 4);
     ctx.fillRect(GAME_W/2-160, GAME_H/2+38, 320, 4);
-    // text
     ctx.fillStyle = '#fff';
     ctx.font = 'bold 22px "Courier New"';
     ctx.fillText(`🏆 STAGE ${stage-1} CLEAR!`, GAME_W/2, GAME_H/2-12);
@@ -616,6 +685,7 @@ function drawOverlay() {
     ctx.fillStyle = '#fff';
     ctx.font = '11px "Courier New"';
     ctx.fillText('TAP TO CONTINUE', GAME_W/2, GAME_H/2+32);
+    }
   } else if (gameState==='gameOver') {
     // ── FAILURE THEME ──
     ctx.fillStyle = 'rgba(40,40,40,0.88)';
@@ -655,7 +725,7 @@ function maybeSpawnObstacle() {
   if (obstaclesSpawned >= OBS_CLEAR - 1) {
     t = 'tree';
   } else {
-    const types = stage<=3?['cactusShort']:stage<=5?['cactusShort','cactusTall']:stage<=7?['cactusTall','cactusShort','cactusShort']:['cactusTall','cactusShort','rock'];
+    const types = STAGE_OBSTACLES[Math.min(stage-1,9)];
     t = types[Math.floor(Math.random()*types.length)];
   }
   const widths = {cactusTall:48, cactusShort:42, rock:54, tree:60};
@@ -768,8 +838,8 @@ function update() {
 
   if (obstaclesPassed >= OBS_CLEAR) {
     gameState = 'stageClear';
-    inputLockTimer = 90; // 1.5s celebration view
-    if (stage < 10) stage++;
+    inputLockTimer = 90;
+    if (stage < 10) stage++; else stage = 11; // stage 11 = ending
     stageFlash = 30;
     // Celebration confetti burst!
     const colors = ['#ffd700','#ff6b6b','#51cf66','#339af0','#ff922b','#f06595','#20c997','#cc5de8'];
@@ -800,14 +870,13 @@ function draw() {
   if (shakeFrames > 0) ctx.translate(shakeX, shakeY);
   drawScene();
   ctx.restore();
-  // Confetti renders on top of overlay
+  if (gameState !== 'playing') drawOverlay();
+  // confetti on top during clear/ending
   if (gameState === 'stageClear') {
     for (let c of confetti) {
-      ctx.fillStyle = c.color;
-      ctx.fillRect(c.x, c.y, c.size, c.size);
+      ctx.fillStyle = c.color; ctx.fillRect(c.x, c.y, c.size, c.size);
     }
   }
-  if (gameState !== 'playing') drawOverlay();
   // stars on top of overlay
   for (let s of starParticles) {
     ctx.save(); ctx.translate(s.x, s.y); ctx.rotate(s.rot);
@@ -839,7 +908,10 @@ function resetGame(full) {
 function doJump() {
   if (inputLockTimer > 0) return; // block input during result screens
   if (gameState === 'waiting') { gameState = 'playing'; resetGame(true); return; }
-  if (gameState === 'stageClear') { resetGame(false); gameState = 'playing'; return; }
+  if (gameState === 'stageClear') {
+    if (stage >= 11) { resetGame(true); gameState = 'waiting'; return; } // ending → menu
+    resetGame(false); gameState = 'playing'; return;
+  }
   if (gameState === 'gameOver') { resetGame(true); gameState = 'playing'; return; }
   if (gameState === 'playing') {
     if (!dino.jumping) {
