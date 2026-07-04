@@ -239,14 +239,14 @@ function drawOverlay(){ctx.textAlign='center';
   ctx.textAlign='start'}
 
 // ─── STAGE CONFIG ───
-function getSpeed(){return[3.5,4.0,4.5,5.0,5.5,6.0,6.5,7.5,8.5,9.0,9.5,10.0,10.5,11.0,11.5,12.0,12.5,13.5,14.5,15.5,16.5,17.5,18.5,19.5,20.5,21.5,22.5,24.0,25.5,27.0][Math.min(stage-1,29)]}
-function getGap(){const g=[[180,280],[170,260],[150,240],[130,210],[110,190],[95,170],[80,150],[70,135],[60,120],[55,105],[50,100],[48,95],[45,90],[43,85],[40,80],[38,75],[36,72],[34,68],[32,65],[30,62],[28,60],[27,58],[26,55],[25,52],[24,50],[23,48],[22,46],[21,44],[20,42],[20,40]];return g[Math.min(stage-1,29)][0]+srand()*(g[Math.min(stage-1,29)][1]-g[Math.min(stage-1,29)][0])}
+function getSpeed(){return[3.5,4.0,4.5,5.0,5.5,6.0,6.5,7.0,7.5,8.0,9.0,10.0,10.5,11.5,12.5,13.5,14.5,15.5,16.5,17.5,18.5,19.5,20.5,21.5,22.5,23.5,24.5,25.5,26.5,27.5][Math.min(stage-1,29)]}
+function getGap(){const g=[[200,300],[190,290],[180,280],[170,260],[160,250],[150,230],[135,210],[120,190],[110,175],[100,160],[95,148],[88,138],[82,128],[76,118],[70,108],[66,100],[62,94],[58,88],[54,82],[50,76],[48,72],[45,68],[42,64],[40,60],[38,56],[36,54],[34,52],[32,50],[30,48],[28,46]];return g[Math.min(stage-1,29)][0]+srand()*(g[Math.min(stage-1,29)][1]-g[Math.min(stage-1,29)][0])}
 function destroyNearestObstacle(){
   let nearest=null,minDist=250;
   for(let o of obstacles){if(!o.passed&&o.x>DINO_X&&o.x-DINO_X<minDist){minDist=o.x-DINO_X;nearest=o}}
   if(nearest){obstacles=obstacles.filter(o=>o!==nearest);sp(nearest.x+nearest.w/2,GROUND_Y-30,12);ap(nearest.x+nearest.w/2,GROUND_Y-40,'💥 파괴!')}
 }
-function spawnObs(){obstacleTimer--;if(obstacleTimer>0)return;const gap=getGap();if(obstacles.length>0){const l=obstacles[obstacles.length-1];if(l.x+l.w+gap>GAME_W)return}let t;if(obstaclesSpawned>=OBS-1){t='tree'}else{t=STAGE_OBSTACLES[Math.min(stage-1,29)][Math.floor(srand()*STAGE_OBSTACLES[Math.min(stage-1,29)].length)]}const w={cactusTall:48,cactusShort:42,rock:54,tree:60};obstacles.push({x:GAME_W,type:t,w:w[t],passed:false});obstaclesSpawned++;obstacleTimer=stage<=3?25+Math.floor(srand()*15):stage<=6?18+Math.floor(srand()*12):12+Math.floor(srand()*10)}
+function spawnObs(){obstacleTimer--;if(obstacleTimer>0)return;const gap=getGap();if(obstacles.length>0){const l=obstacles[obstacles.length-1];if(l.x+l.w+gap>GAME_W)return}let t;if(obstaclesSpawned>=OBS-1){t='tree'}else{t=STAGE_OBSTACLES[Math.min(stage-1,29)][Math.floor(srand()*STAGE_OBSTACLES[Math.min(stage-1,29)].length)]}const w={cactusTall:48,cactusShort:42,rock:54,tree:60};obstacles.push({x:GAME_W,type:t,w:w[t],passed:false});obstaclesSpawned++;obstacleTimer=stage<=3?28+Math.floor(srand()*18):stage<=6?20+Math.floor(srand()*14):stage<=10?14+Math.floor(srand()*10):stage<=20?8+Math.floor(srand()*8):5+Math.floor(srand()*6)}
 function chkCol(){const dB=getHitbox();for(let o of obstacles){let oB;if(o.type==='cactusTall')oB={x:o.x+10,y:GROUND_Y-42,w:10,h:42};else if(o.type==='cactusShort')oB={x:o.x+9,y:GROUND_Y-24,w:10,h:24};else if(o.type==='rock')oB={x:o.x+16,y:GROUND_Y-24,w:14,h:24};else oB={x:o.x+14,y:GROUND_Y-42,w:10,h:42};if(dB.x<oB.x+oB.w&&dB.x+dB.w>oB.x&&dB.y<oB.y+oB.h&&dB.y+dB.h>oB.y)return true}return false}
 function sp(x,y,c){for(let i=0;i<c;i++)particles.push({x,y,vx:(Math.random()-.5)*4,vy:-2-Math.random()*4,life:15+Math.random()*20,maxLife:35,size:2+Math.floor(Math.random()*4)})}
 function ap(x,y,t){popups.push({x,y,text:t,life:30,maxLife:30})}
