@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>DINO RUNNER v11</title>
+<title>DINO RUNNER v12</title>
 <style>
   * { margin:0; padding:0; box-sizing:border-box; }
   html, body {
@@ -29,16 +29,33 @@
   }
   #ui div { line-height:1.6; }
   #ui span { color:#535353; font-weight:bold; }
-  #overlay {
+
+  /* Dino selection buttons */
+  #selBtns {
     position:absolute; top:0; left:0; width:100%; height:100%;
-    display:flex; flex-direction:column; align-items:center;
-    justify-content:center;
-    pointer-events:none; z-index:10;
+    pointer-events:none; z-index:20;
+    display:none; flex-direction:row; align-items:center; justify-content:space-between;
   }
-  #msg { text-align:center; color:#535353; font-family:'Courier New',monospace; }
-  #msg .title { font-size:clamp(16px,4vw,28px); font-weight:bold; letter-spacing:3px; margin-bottom:8px; }
-  #msg .sub { font-size:clamp(10px,2.5vw,16px); letter-spacing:1px; }
-  .hidden { display:none !important; }
+  #selBtns.show { display:flex; }
+  .selBtn {
+    pointer-events:auto;
+    width:18%; height:60%; min-width:44px;
+    display:flex; align-items:center; justify-content:center;
+    font-size:clamp(24px,6vw,48px); color:#bbb;
+    background:transparent; border:none; cursor:pointer;
+    -webkit-tap-highlight-color:transparent;
+    user-select:none; -webkit-user-select:none;
+    transition: color 0.1s;
+    font-family:'Courier New',monospace;
+  }
+  .selBtn:active { color:#535353; }
+  #selInfo {
+    position:absolute; bottom:8%; left:50%; transform:translateX(-50%);
+    text-align:center; pointer-events:none; z-index:21;
+    display:none; color:#999; font-family:'Courier New',monospace;
+    font-size:clamp(10px,2vw,14px); letter-spacing:1px;
+  }
+  #selInfo.show { display:block; }
 </style>
 </head>
 <body>
@@ -47,18 +64,55 @@
   <div>HI <span id="hi">00000</span></div>
   <div><span id="score">00000</span></div>
   <div>STAGE <span id="stg">1</span></div>
-  <div style="font-size:8px;color:#ccc;margin-top:2px;">v11</div>
+  <div style="font-size:8px;color:#ccc;margin-top:2px;">v12</div>
 </div>
-<div id="overlay">
-  <div id="msg">
-    <div class="title" id="msgTitle"></div>
-    <div class="sub" id="msgSub"></div>
-  </div>
+<div id="selBtns">
+  <button class="selBtn" id="btnPrev">◀</button>
+  <div style="flex:1"></div>
+  <button class="selBtn" id="btnNext">▶</button>
 </div>
+<div id="selInfo">◀ ▶ 변경 · 중앙 TAP 시작</div>
+<div id="overlay"></div>
 
 <script>
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
+const selBtns = document.getElementById('selBtns');
+const selInfo = document.getElementById('selInfo');
+const btnPrev = document.getElementById('btnPrev');
+const btnNext = document.getElementById('btnNext');
+
+// ─── SELECTION UI ───
+function showSelectionUI() {
+  selBtns.classList.add('show');
+  selInfo.classList.add('show');
+}
+function hideSelectionUI() {
+  selBtns.classList.remove('show');
+  selInfo.classList.remove('show');
+}
+
+btnPrev.addEventListener('click', e => { e.stopPropagation(); cycleDino(-1); });
+btnNext.addEventListener('click', e => { e.stopPropagation(); cycleDino(1); });
+
+function cycleDino(dir) {
+  dinoType = (dinoType + dir + 4) % 4;
+  localStorage.setItem('dinoType', dinoType);
+}
+
+// ─── SWIPE ───
+let swipeStartX = 0;
+document.addEventListener('touchstart', e => {
+  swipeStartX = e.touches[0].clientX;
+}, {passive:true});
+
+document.addEventListener('touchend', e => {
+  if (gameState !== 'waiting') return;
+  const dx = e.changedTouches[0].clientX - swipeStartX;
+  if (Math.abs(dx) > 50) {
+    cycleDino(dx > 0 ? -1 : 1);
+  }
+});
 
 // ─── GAME STATE ───
 let gameState = 'waiting';
@@ -71,8 +125,8 @@ let stageFlash = 0;
 let canDoubleJump = false, jumpsUsed = 0;
 let speedLines = [];
 let obstaclesSpawned = 0;
-let inputLockTimer = 0; // prevent accidental skip of result screens
-let landingSquish = 0; // bounce animation on landing
+let inputLockTimer = 0;
+let landingSquish = 0;
 
 // ─── RESIZE ───
 const GAME_W = 900, GAME_H = 300;
@@ -95,19 +149,17 @@ resize();
 const GROUND_Y = 250;
 const DINO_X = 65;
 const STAGE_NAMES = ['초원의 시작','선인장 지대','숲속 모험','사막 횡단','험난한 협곡','화산 지대','어둠의 숲','폭풍의 언덕','용암 협곡','신들의 땅'];
-
-// ─── STAGE OBSTACLE THEMES ───
 const STAGE_OBSTACLES = [
-  ['cactusShort'],                          // 1 초원
-  ['cactusShort','cactusTall'],             // 2 선인장
-  ['cactusShort','tree'],                   // 3 숲속
-  ['cactusTall','rock'],                    // 4 사막
-  ['rock','cactusTall','cactusShort'],      // 5 협곡
-  ['rock','cactusTall','cactusTall'],       // 6 화산
-  ['tree','cactusShort','rock'],           // 7 어둠숲
-  ['cactusTall','rock','tree'],            // 8 폭풍
-  ['rock','rock','cactusTall'],            // 9 용암
-  ['tree','rock','cactusTall'],            // 10 신들의 땅
+  ['cactusShort'],
+  ['cactusShort','cactusTall'],
+  ['cactusShort','tree'],
+  ['cactusTall','rock'],
+  ['rock','cactusTall','cactusShort'],
+  ['rock','cactusTall','cactusTall'],
+  ['tree','cactusShort','rock'],
+  ['cactusTall','rock','tree'],
+  ['rock','rock','cactusTall'],
+  ['tree','rock','cactusTall'],
 ];
 
 // ─── DINO TYPES ───
@@ -125,833 +177,334 @@ const dino = {
   jumpPower: -9.5, gravity: 0.5
 };
 
-// ─── MOUNTAINS (parallax bg) ───
+// ─── MOUNTAINS ───
 let mountains = [];
 for (let i = 0; i < 6; i++) {
   mountains.push({ x: i * 160 + Math.random() * 40, h: 40 + Math.random() * 50, w: 80 + Math.random() * 60 });
 }
 
-// ─── DRAW DINO (T-Rex, original) ───
+// ─── DRAW DINO: T-Rex ───
 function drawDinoTrex(dx, dy, runFrame, jumping) {
   const cBody = '#535353', cDark = '#3c3c3c';
-  const squish = landingSquish > 0 ? Math.sin(landingSquish*0.5) * (landingSquish/8) : 0;
-  const squishY = Math.abs(squish) * 4;
-  const squishW = squish * 2;
-
+  const squish = landingSquish > 0 ? Math.sin(landingSquish*0.5)*(landingSquish/8) : 0;
+  const sqY = Math.abs(squish)*4, sqW = squish*2;
   ctx.fillStyle = cBody;
-  // body with squish
-  ctx.fillRect(dx+6-squishW, dy-30+squishY, 24+squishW*2, 15-squishY);
+  ctx.fillRect(dx+6-sqW, dy-30+sqY, 24+sqW*2, 15-sqY);
   ctx.fillRect(dx+3, dy-24, 12, 9);
   ctx.fillRect(dx+9, dy-18, 15, 6);
-
-  // tail
   ctx.fillRect(dx-3, dy-21, 9, 6);
   ctx.fillRect(dx-9, dy-19, 9, 3);
-
-  // head
   ctx.fillRect(dx+21, dy-48, 15, 15);
   ctx.fillRect(dx+18, dy-51, 6, 3);
   ctx.fillRect(dx+33, dy-42, 6, 6);
   ctx.fillRect(dx+15, dy-36, 21, 6);
   ctx.fillRect(dx+12, dy-33, 6, 3);
-
-  // spikes
   ctx.fillStyle = cDark;
-  ctx.fillRect(dx+3, dy-33, 3, 3);
-  ctx.fillRect(dx+0, dy-27, 3, 3);
-
-  // arm
-  ctx.fillStyle = cBody;
-  ctx.fillRect(dx+12, dy-21, 4, 9);
-
-  // legs
-  const legW = 6, legH = 12;
-  if (jumping) {
-    ctx.fillRect(dx+6, dy-15, legW, 5);
-    ctx.fillRect(dx+18, dy-15, legW, 5);
-  } else if (runFrame) {
-    ctx.fillRect(dx+3, dy-15, legW, legH-3);
-    ctx.fillRect(dx+21, dy-15, legW, legH);
-  } else {
-    ctx.fillRect(dx+3, dy-15, legW, legH);
-    ctx.fillRect(dx+21, dy-15, legW, legH-3);
-  }
-
-  // ── GOOGLY EYE (tracks nearest obstacle) ──
-  let eyeOffX = 0, eyeOffY = 0;
-  if (obstacles.length > 0 && gameState === 'playing') {
-    let nearest = null, nearestDist = Infinity;
-    for (let o of obstacles) {
-      const dist = o.x + o.w/2 - (dx+27);
-      if (dist > -30 && dist < nearestDist) { nearestDist = dist; nearest = o; }
-    }
-    if (nearest) {
-      const angle = Math.atan2((GROUND_Y - (nearest.type==='cactusShort'||nearest.type==='rock'?GROUND_Y-25:GROUND_Y-45)) - (dy-42), nearest.x + nearest.w/2 - (dx+27));
-      eyeOffX = Math.cos(angle) * 1.5;
-      eyeOffY = Math.sin(angle) * 1.5;
-    }
-  }
-  // eye white
-  ctx.fillStyle = '#fff';
-  ctx.fillRect(dx+24, dy-45, 7, 7);
-  // pupil (tracks)
-  ctx.fillStyle = '#000';
-  ctx.fillRect(dx+25+eyeOffX, dy-44+eyeOffY, 3, 3);
-
-  // ── TONGUE (when jumping) ──
-  if (jumping && dino.vy < -3) {
-    ctx.fillStyle = '#ff6b6b';
-    ctx.fillRect(dx+30, dy-33, 3, 6);
-  }
-
-  // mouth
-  ctx.fillStyle = cDark;
-  ctx.fillRect(dx+18, dy-34, 15, 2);
+  ctx.fillRect(dx+3, dy-33, 3, 3); ctx.fillRect(dx+0, dy-27, 3, 3);
+  ctx.fillStyle = cBody; ctx.fillRect(dx+12, dy-21, 4, 9);
+  const lw=6, lh=12;
+  if (jumping) { ctx.fillRect(dx+6,dy-15,lw,5); ctx.fillRect(dx+18,dy-15,lw,5); }
+  else if (runFrame) { ctx.fillRect(dx+3,dy-15,lw,lh-3); ctx.fillRect(dx+21,dy-15,lw,lh); }
+  else { ctx.fillRect(dx+3,dy-15,lw,lh); ctx.fillRect(dx+21,dy-15,lw,lh-3); }
+  ctx.fillStyle='#fff'; ctx.fillRect(dx+24,dy-45,7,7);
+  ctx.fillStyle='#000'; ctx.fillRect(dx+26,dy-43,3,3);
+  ctx.fillStyle = cDark; ctx.fillRect(dx+18,dy-34,15,2);
 }
 
-// ─── DRAW DINO: Triceratops ───
 function drawDinoTrike(dx, dy, runFrame, jumping) {
-  const cBody = '#535353', cDark = '#3c3c3c';
-  const squish = landingSquish > 0 ? Math.sin(landingSquish*0.5)*(landingSquish/8) : 0;
-  const sqY = Math.abs(squish)*4, sqW = squish*2;
-  ctx.fillStyle = cBody;
-  // body
-  ctx.fillRect(dx+8-sqW, dy-28+sqY, 22+sqW*2, 13-sqY);
-  ctx.fillRect(dx+4, dy-22, 10, 8);
-  ctx.fillRect(dx+12, dy-16, 12, 5);
-  // tail (short)
-  ctx.fillRect(dx-3, dy-20, 8, 5);
-  // head with frill
-  ctx.fillStyle = cBody;
-  ctx.fillRect(dx+26, dy-44, 12, 14); // head
-  ctx.fillRect(dx+24, dy-48, 16, 6); // frill top
-  ctx.fillRect(dx+22, dy-38, 18, 4); // frill bottom
-  // horns
-  ctx.fillStyle = cDark;
-  ctx.fillRect(dx+30, dy-50, 3, 5); // center horn
-  ctx.fillRect(dx+26, dy-50, 2, 4); // left horn
-  ctx.fillRect(dx+36, dy-50, 2, 4); // right horn
-  // snout
-  ctx.fillStyle = cBody;
-  ctx.fillRect(dx+36, dy-38, 6, 5);
-  // beak
-  ctx.fillStyle = cDark;
-  ctx.fillRect(dx+38, dy-36, 4, 2);
-  // legs
-  const lw=6, lh=11;
-  if (jumping) { ctx.fillRect(dx+8,dy-13,lw,4); ctx.fillRect(dx+20,dy-13,lw,4); }
-  else if (runFrame) { ctx.fillRect(dx+6,dy-13,lw,lh-2); ctx.fillRect(dx+22,dy-13,lw,lh); }
-  else { ctx.fillRect(dx+6,dy-13,lw,lh); ctx.fillRect(dx+22,dy-13,lw,lh-2); }
-  // eye
-  ctx.fillStyle='#fff'; ctx.fillRect(dx+29,dy-43,5,5);
-  ctx.fillStyle='#000'; ctx.fillRect(dx+31,dy-42,2,2);
-  // mouth
-  ctx.fillStyle=cDark; ctx.fillRect(dx+28,dy-33,10,2);
+  const cB = '#535353', cD = '#3c3c3c';
+  const sq = landingSquish>0?Math.sin(landingSquish*.5)*(landingSquish/8):0;
+  const sY=Math.abs(sq)*4,sW=sq*2;
+  ctx.fillStyle=cB;
+  ctx.fillRect(dx+8-sW,dy-28+sY,22+sW*2,13-sY);
+  ctx.fillRect(dx+4,dy-22,10,8); ctx.fillRect(dx+12,dy-16,12,5);
+  ctx.fillRect(dx-3,dy-20,8,5);
+  ctx.fillRect(dx+26,dy-44,12,14); ctx.fillRect(dx+24,dy-48,16,6); ctx.fillRect(dx+22,dy-38,18,4);
+  ctx.fillStyle=cD;
+  ctx.fillRect(dx+30,dy-50,3,5); ctx.fillRect(dx+26,dy-50,2,4); ctx.fillRect(dx+36,dy-50,2,4);
+  ctx.fillStyle=cB; ctx.fillRect(dx+36,dy-38,6,5);
+  ctx.fillStyle=cD; ctx.fillRect(dx+38,dy-36,4,2);
+  const lw=6,lh=11;
+  if(jumping){ctx.fillRect(dx+8,dy-13,lw,4);ctx.fillRect(dx+20,dy-13,lw,4)}
+  else if(runFrame){ctx.fillRect(dx+6,dy-13,lw,lh-2);ctx.fillRect(dx+22,dy-13,lw,lh)}
+  else{ctx.fillRect(dx+6,dy-13,lw,lh);ctx.fillRect(dx+22,dy-13,lw,lh-2)}
+  ctx.fillStyle='#fff';ctx.fillRect(dx+29,dy-43,5,5);
+  ctx.fillStyle='#000';ctx.fillRect(dx+31,dy-42,2,2);
+  ctx.fillStyle=cD;ctx.fillRect(dx+28,dy-33,10,2);
 }
 
-// ─── DRAW DINO: Raptor ───
 function drawDinoRaptor(dx, dy, runFrame, jumping) {
-  const cBody = '#535353', cDark = '#3c3c3c';
-  const squish = landingSquish > 0 ? Math.sin(landingSquish*0.5)*(landingSquish/8) : 0;
-  const sqY = Math.abs(squish)*4, sqW = squish*2;
-  ctx.fillStyle = cBody;
-  // sleek body
-  ctx.fillRect(dx+6-sqW, dy-26+sqY, 20+sqW*2, 11-sqY);
-  ctx.fillRect(dx+3, dy-20, 14, 7);
-  // long tail
-  ctx.fillRect(dx-6, dy-18, 12, 4);
-  ctx.fillRect(dx-12, dy-16, 9, 3);
-  // head
-  ctx.fillRect(dx+22, dy-40, 12, 12);
-  ctx.fillRect(dx+30, dy-36, 10, 5); // snout
-  // crest
-  ctx.fillStyle=cDark; ctx.fillRect(dx+24,dy-43,3,4);
-  // eye
-  ctx.fillStyle='#fff'; ctx.fillRect(dx+26,dy-38,5,5);
-  ctx.fillStyle='#000'; ctx.fillRect(dx+28,dy-37,2,2);
-  // teeth
-  ctx.fillStyle=cBody;
-  for (let i=0;i<3;i++) ctx.fillRect(dx+32+i*3,dy-34,2,3);
-  // legs (longer, springy)
-  const lw=5, lh=14;
-  ctx.fillStyle=cBody;
-  if (jumping) { ctx.fillRect(dx+6,dy-14,lw,4); ctx.fillRect(dx+18,dy-14,lw,4); }
-  else if (runFrame) { ctx.fillRect(dx+4,dy-14,lw,lh-3); ctx.fillRect(dx+19,dy-14,lw,lh); }
-  else { ctx.fillRect(dx+4,dy-14,lw,lh); ctx.fillRect(dx+19,dy-14,lw,lh-3); }
-  // claw
-  ctx.fillStyle=cDark; ctx.fillRect(dx+14,dy-16,3,3);
+  const cB='#535353',cD='#3c3c3c';
+  const sq=landingSquish>0?Math.sin(landingSquish*.5)*(landingSquish/8):0;
+  const sY=Math.abs(sq)*4,sW=sq*2;
+  ctx.fillStyle=cB;
+  ctx.fillRect(dx+6-sW,dy-26+sY,20+sW*2,11-sY);
+  ctx.fillRect(dx+3,dy-20,14,7);
+  ctx.fillRect(dx-6,dy-18,12,4); ctx.fillRect(dx-12,dy-16,9,3);
+  ctx.fillRect(dx+22,dy-40,12,12); ctx.fillRect(dx+30,dy-36,10,5);
+  ctx.fillStyle=cD; ctx.fillRect(dx+24,dy-43,3,4);
+  ctx.fillStyle='#fff';ctx.fillRect(dx+26,dy-38,5,5);
+  ctx.fillStyle='#000';ctx.fillRect(dx+28,dy-37,2,2);
+  ctx.fillStyle=cB; for(let i=0;i<3;i++)ctx.fillRect(dx+32+i*3,dy-34,2,3);
+  const lw=5,lh=14;
+  if(jumping){ctx.fillRect(dx+6,dy-14,lw,4);ctx.fillRect(dx+18,dy-14,lw,4)}
+  else if(runFrame){ctx.fillRect(dx+4,dy-14,lw,lh-3);ctx.fillRect(dx+19,dy-14,lw,lh)}
+  else{ctx.fillRect(dx+4,dy-14,lw,lh);ctx.fillRect(dx+19,dy-14,lw,lh-3)}
+  ctx.fillStyle=cD;ctx.fillRect(dx+14,dy-16,3,3);
 }
 
-// ─── DRAW DINO: Pterodactyl ───
 function drawDinoPtero(dx, dy, runFrame, jumping) {
-  const cBody = '#535353', cDark = '#3c3c3c';
-  ctx.fillStyle = cBody;
-  // body
-  ctx.fillRect(dx+12, dy-22, 16, 12);
-  ctx.fillRect(dx+8, dy-18, 8, 6);
-  // tail
-  ctx.fillRect(dx+3, dy-16, 8, 3);
-  // head + beak
-  ctx.fillRect(dx+24, dy-34, 10, 10);
-  ctx.fillRect(dx+32, dy-30, 12, 4); // long beak
-  // crest
-  ctx.fillStyle=cDark; ctx.fillRect(dx+25,dy-38,4,5);
-  // eye
-  ctx.fillStyle='#fff'; ctx.fillRect(dx+27,dy-32,4,4);
-  ctx.fillStyle='#000'; ctx.fillRect(dx+28,dy-31,2,2);
-  // wings (flap when jumping)
-  ctx.fillStyle=cBody;
-  const wingFlap = jumping ? 6 : 0;
-  ctx.fillRect(dx+8, dy-30-wingFlap, 4, 12+wingFlap);
-  ctx.fillRect(dx+20, dy-30-wingFlap, 4, 12+wingFlap);
-  // legs (tiny)
-  ctx.fillStyle=cBody;
-  if (jumping) { ctx.fillRect(dx+14,dy-12,4,3); ctx.fillRect(dx+22,dy-12,4,3); }
-  else if (runFrame) { ctx.fillRect(dx+13,dy-12,4,6); ctx.fillRect(dx+23,dy-12,4,8); }
-  else { ctx.fillRect(dx+13,dy-12,4,8); ctx.fillRect(dx+23,dy-12,4,6); }
+  const cB='#535353',cD='#3c3c3c';
+  ctx.fillStyle=cB;
+  ctx.fillRect(dx+12,dy-22,16,12); ctx.fillRect(dx+8,dy-18,8,6);
+  ctx.fillRect(dx+3,dy-16,8,3);
+  ctx.fillRect(dx+24,dy-34,10,10); ctx.fillRect(dx+32,dy-30,12,4);
+  ctx.fillStyle=cD;ctx.fillRect(dx+25,dy-38,4,5);
+  ctx.fillStyle='#fff';ctx.fillRect(dx+27,dy-32,4,4);
+  ctx.fillStyle='#000';ctx.fillRect(dx+28,dy-31,2,2);
+  const wf=jumping?6:0;
+  ctx.fillStyle=cB;ctx.fillRect(dx+8,dy-30-wf,4,12+wf);ctx.fillRect(dx+20,dy-30-wf,4,12+wf);
+  if(jumping){ctx.fillRect(dx+14,dy-12,4,3);ctx.fillRect(dx+22,dy-12,4,3)}
+  else if(runFrame){ctx.fillRect(dx+13,dy-12,4,6);ctx.fillRect(dx+23,dy-12,4,8)}
+  else{ctx.fillRect(dx+13,dy-12,4,8);ctx.fillRect(dx+23,dy-12,4,6)}
 }
 
-// ─── DRAW CURRENT DINO ───
 function drawCurrentDino(dx, dy, runFrame, jumping) {
-  const fns = [drawDinoTrex, drawDinoTrike, drawDinoRaptor, drawDinoPtero];
-  fns[dinoType](dx, dy, runFrame, jumping);
+  [drawDinoTrex,drawDinoTrike,drawDinoRaptor,drawDinoPtero][dinoType](dx,dy,runFrame,jumping);
 }
 
-// ─── DRAW BG ───
-// Stage-specific background colors (subtle grayscale)
+// ─── BG ───
 const STAGE_BG = ['#f0f4f8','#f2f0ec','#edf2ea','#f5f0e8','#eceef0','#f0eeec','#e8eaee','#eae9ed','#eee8e4','#eceff4'];
 const STAGE_SKY = ['#e8ecf0','#e6ddd4','#dce8da','#e8dcc8','#dde0e4','#e8dcd4','#d4d8e0','#c8c4d0','#e0d4cc','#dce0e8'];
 
 function drawMountains() {
-  const s = Math.min(stage-1, 9);
-  // base mountains (all stages)
+  const s = Math.min(stage-1,9);
   ctx.fillStyle = STAGE_BG[s];
   for (let m of mountains) {
-    const mx = m.x, my = GROUND_Y - 10;
-    ctx.beginPath();
-    ctx.moveTo(mx, my);
-    ctx.lineTo(mx + m.w/2, my - m.h);
-    ctx.lineTo(mx + m.w, my);
-    ctx.fill();
-    ctx.fillStyle = STAGE_SKY[s];
-    ctx.beginPath();
-    ctx.moveTo(mx + m.w*0.25, my);
-    ctx.lineTo(mx + m.w/2, my - m.h + 15);
-    ctx.lineTo(mx + m.w*0.65, my);
-    ctx.fill();
-    ctx.fillStyle = STAGE_BG[s];
+    const mx=m.x, my=GROUND_Y-10;
+    ctx.beginPath(); ctx.moveTo(mx,my); ctx.lineTo(mx+m.w/2,my-m.h); ctx.lineTo(mx+m.w,my); ctx.fill();
+    ctx.fillStyle=STAGE_SKY[s];
+    ctx.beginPath(); ctx.moveTo(mx+m.w*.25,my); ctx.lineTo(mx+m.w/2,my-m.h+15); ctx.lineTo(mx+m.w*.65,my); ctx.fill();
+    ctx.fillStyle=STAGE_BG[s];
   }
 }
 
 function drawStageScenery(s) {
   const spd = getSpeed();
-  ctx.fillStyle = '#999';
-
-  if (s === 0) { // 초원의 시작 — grass tufts, distant hills
-    for (let i=0; i<8; i++) {
-      const gx = ((i*120 - frame*spd*0.2) % (GAME_W+200)) - 40;
-      ctx.fillStyle = '#999';
-      ctx.beginPath(); ctx.moveTo(gx,GROUND_Y-3); ctx.lineTo(gx+4,GROUND_Y-15); ctx.lineTo(gx+8,GROUND_Y-3); ctx.fill();
-      ctx.beginPath(); ctx.moveTo(gx+6,GROUND_Y-3); ctx.lineTo(gx+10,GROUND_Y-20); ctx.lineTo(gx+14,GROUND_Y-3); ctx.fill();
-      ctx.beginPath(); ctx.moveTo(gx+10,GROUND_Y-3); ctx.lineTo(gx+14,GROUND_Y-12); ctx.lineTo(gx+18,GROUND_Y-3); ctx.fill();
+  if (s===0) {
+    for(let i=0;i<8;i++){const gx=((i*120-frame*spd*.2)%(GAME_W+200))-40;
+      ctx.fillStyle='#999';
+      ctx.beginPath();ctx.moveTo(gx,GROUND_Y-3);ctx.lineTo(gx+4,GROUND_Y-15);ctx.lineTo(gx+8,GROUND_Y-3);ctx.fill();
+      ctx.beginPath();ctx.moveTo(gx+6,GROUND_Y-3);ctx.lineTo(gx+10,GROUND_Y-20);ctx.lineTo(gx+14,GROUND_Y-3);ctx.fill();
+      ctx.beginPath();ctx.moveTo(gx+10,GROUND_Y-3);ctx.lineTo(gx+14,GROUND_Y-12);ctx.lineTo(gx+18,GROUND_Y-3);ctx.fill();
     }
-  } else if (s === 1) { // 선인장 지대 — sparse desert shrubs, sun
-    ctx.fillStyle = '#bbb';
-    ctx.beginPath(); ctx.arc(750, 50, 35, 0, Math.PI*2); ctx.fill();
-    ctx.fillStyle = '#ddd';
-    ctx.beginPath(); ctx.arc(750, 50, 28, 0, Math.PI*2); ctx.fill();
-  } else if (s === 2) { // 숲속 모험 — distant trees, bushes
-    for (let i=0; i<6; i++) {
-      const tx = ((i*160 - frame*spd*0.3) % (GAME_W+200)) - 40;
-      ctx.fillStyle = '#aaa';
-      ctx.beginPath(); ctx.moveTo(tx,GROUND_Y-2); ctx.lineTo(tx+10,GROUND_Y-35); ctx.lineTo(tx+20,GROUND_Y-2); ctx.fill();
-      ctx.fillStyle = '#bbb';
-      ctx.beginPath(); ctx.moveTo(tx+5,GROUND_Y-2); ctx.lineTo(tx+12,GROUND_Y-25); ctx.lineTo(tx+19,GROUND_Y-2); ctx.fill();
-    }
-  } else if (s === 3) { // 사막 횡단 — sand dunes
-    ctx.fillStyle = '#c8c0b4';
-    for (let i=0; i<4; i++) {
-      const dx = ((i*250 - frame*spd*0.25) % (GAME_W+300)) - 50;
-      ctx.beginPath(); ctx.arc(dx+80, GROUND_Y, 100, Math.PI, 0); ctx.fill();
-    }
-    ctx.fillStyle = '#ddd';
-    ctx.beginPath(); ctx.arc(750, 45, 32, 0, Math.PI*2); ctx.fill();
-  } else if (s === 4) { // 험난한 협곡 — canyon walls
-    ctx.fillStyle = '#888';
-    ctx.beginPath(); ctx.moveTo(0,GROUND_Y-60); ctx.lineTo(60,GROUND_Y-80); ctx.lineTo(120,GROUND_Y-50); ctx.lineTo(140,GROUND_Y); ctx.fill();
-    ctx.beginPath(); ctx.moveTo(GAME_W,GROUND_Y-50); ctx.lineTo(GAME_W-80,GROUND_Y-90); ctx.lineTo(GAME_W-140,GROUND_Y-40); ctx.lineTo(GAME_W-180,GROUND_Y); ctx.fill();
-  } else if (s === 5) { // 화산 지대 — volcano + smoke
-    ctx.fillStyle = '#777';
-    ctx.beginPath(); ctx.moveTo(620,GROUND_Y); ctx.lineTo(680,GROUND_Y-90); ctx.lineTo(740,GROUND_Y); ctx.fill();
-    ctx.fillStyle = '#888';
-    ctx.beginPath(); ctx.moveTo(650,GROUND_Y); ctx.lineTo(680,GROUND_Y-70); ctx.lineTo(720,GROUND_Y); ctx.fill();
-    // smoke puffs
-    for (let i=0; i<5; i++) {
-      const sx = 680 - frame*0.3 + i*20; const sy = GROUND_Y-100 - i*15;
-      ctx.fillStyle = '#ccc'; ctx.beginPath(); ctx.arc(sx,sy, 10+i*4, 0, Math.PI*2); ctx.fill();
-    }
-  } else if (s === 6) { // 어둠의 숲 — spooky dead trees, darker bg
-    ctx.fillStyle = '#666';
-    for (let i=0; i<5; i++) {
-      const tx = ((i*180 - frame*spd*0.3) % (GAME_W+200)) - 40;
-      ctx.fillRect(tx+10, GROUND_Y-50, 4, 50);
-      ctx.beginPath(); ctx.moveTo(tx-2,GROUND_Y-30); ctx.lineTo(tx+12,GROUND_Y-55); ctx.lineTo(tx+20,GROUND_Y-25); ctx.fill();
-      ctx.beginPath(); ctx.moveTo(tx+5,GROUND_Y-20); ctx.lineTo(tx+12,GROUND_Y-40); ctx.lineTo(tx+24,GROUND_Y-18); ctx.fill();
-    }
-  } else if (s === 7) { // 폭풍의 언덕 — dramatic clouds, rain lines
-    ctx.fillStyle = '#999';
-    for (let i=0; i<6; i++) {
-      const cx = ((i*170 - frame*spd*0.2) % (GAME_W+200)) - 40;
-      ctx.beginPath(); ctx.arc(cx, 40, 30, 0, Math.PI*2); ctx.fill();
-      ctx.beginPath(); ctx.arc(cx+25, 50, 25, 0, Math.PI*2); ctx.fill();
-      ctx.beginPath(); ctx.arc(cx-20, 50, 20, 0, Math.PI*2); ctx.fill();
-    }
-    // rain streaks
-    ctx.strokeStyle = 'rgba(150,150,160,0.3)';
-    ctx.lineWidth = 1;
-    for (let i=0; i<30; i++) {
-      const rx = ((i*35 + frame*1.5) % GAME_W); const ry = ((i*23) % (GROUND_Y-60)) + 30;
-      ctx.beginPath(); ctx.moveTo(rx,ry); ctx.lineTo(rx-3,ry+10); ctx.stroke();
-    }
-  } else if (s === 8) { // 용암 협곡 — lava glow at bottom
-    ctx.fillStyle = '#888';
-    ctx.beginPath(); ctx.moveTo(0,GROUND_Y-50); ctx.lineTo(100,GROUND_Y-70); ctx.lineTo(200,GROUND_Y); ctx.fill();
-    ctx.beginPath(); ctx.moveTo(GAME_W,GROUND_Y-40); ctx.lineTo(GAME_W-120,GROUND_Y-80); ctx.lineTo(GAME_W-220,GROUND_Y); ctx.fill();
-    // lava cracks
-    ctx.fillStyle = '#666';
-    for (let i=0; i<4; i++) {
-      const lx = ((i*280 - frame*spd*0.3) % (GAME_W+300)) - 40;
-      ctx.beginPath(); ctx.moveTo(lx,GROUND_Y-2); ctx.lineTo(lx+20,GROUND_Y-8); ctx.lineTo(lx+30,GROUND_Y-3); ctx.fill();
-    }
-  } else if (s === 9) { // 신들의 땅 — pillars, stars
-    ctx.fillStyle = '#999';
-    // pillars
-    for (let i=0; i<3; i++) {
-      const px = 100 + i*300;
-      ctx.fillRect(px, GROUND_Y-70, 12, 70);
-      ctx.fillRect(px-4, GROUND_Y-75, 20, 8);
-    }
-    // distant glow
-    ctx.fillStyle = '#ccc';
-    ctx.beginPath(); ctx.arc(700, 60, 40, 0, Math.PI*2); ctx.fill();
-    ctx.fillStyle = '#ddd';
-    ctx.beginPath(); ctx.arc(700, 60, 25, 0, Math.PI*2); ctx.fill();
-  }
+  } else if(s===1){ctx.fillStyle='#bbb';ctx.beginPath();ctx.arc(750,50,35,0,Math.PI*2);ctx.fill();ctx.fillStyle='#ddd';ctx.beginPath();ctx.arc(750,50,28,0,Math.PI*2);ctx.fill();}
+  else if(s===2){for(let i=0;i<6;i++){const tx=((i*160-frame*spd*.3)%(GAME_W+200))-40;
+    ctx.fillStyle='#aaa';ctx.beginPath();ctx.moveTo(tx,GROUND_Y-2);ctx.lineTo(tx+10,GROUND_Y-35);ctx.lineTo(tx+20,GROUND_Y-2);ctx.fill();
+    ctx.fillStyle='#bbb';ctx.beginPath();ctx.moveTo(tx+5,GROUND_Y-2);ctx.lineTo(tx+12,GROUND_Y-25);ctx.lineTo(tx+19,GROUND_Y-2);ctx.fill();
+  }}
+  else if(s===3){ctx.fillStyle='#c8c0b4';for(let i=0;i<4;i++){const dx=((i*250-frame*spd*.25)%(GAME_W+300))-50;ctx.beginPath();ctx.arc(dx+80,GROUND_Y,100,Math.PI,0);ctx.fill();}ctx.fillStyle='#ddd';ctx.beginPath();ctx.arc(750,45,32,0,Math.PI*2);ctx.fill();}
+  else if(s===4){ctx.fillStyle='#888';ctx.beginPath();ctx.moveTo(0,GROUND_Y-60);ctx.lineTo(60,GROUND_Y-80);ctx.lineTo(120,GROUND_Y-50);ctx.lineTo(140,GROUND_Y);ctx.fill();ctx.beginPath();ctx.moveTo(GAME_W,GROUND_Y-50);ctx.lineTo(GAME_W-80,GROUND_Y-90);ctx.lineTo(GAME_W-140,GROUND_Y-40);ctx.lineTo(GAME_W-180,GROUND_Y);ctx.fill();}
+  else if(s===5){ctx.fillStyle='#777';ctx.beginPath();ctx.moveTo(620,GROUND_Y);ctx.lineTo(680,GROUND_Y-90);ctx.lineTo(740,GROUND_Y);ctx.fill();ctx.fillStyle='#888';ctx.beginPath();ctx.moveTo(650,GROUND_Y);ctx.lineTo(680,GROUND_Y-70);ctx.lineTo(720,GROUND_Y);ctx.fill();for(let i=0;i<5;i++){const sx=680-frame*.3+i*20,sy=GROUND_Y-100-i*15;ctx.fillStyle='#ccc';ctx.beginPath();ctx.arc(sx,sy,10+i*4,0,Math.PI*2);ctx.fill();}}
+  else if(s===6){ctx.fillStyle='#666';for(let i=0;i<5;i++){const tx=((i*180-frame*spd*.3)%(GAME_W+200))-40;ctx.fillRect(tx+10,GROUND_Y-50,4,50);ctx.beginPath();ctx.moveTo(tx-2,GROUND_Y-30);ctx.lineTo(tx+12,GROUND_Y-55);ctx.lineTo(tx+20,GROUND_Y-25);ctx.fill();ctx.beginPath();ctx.moveTo(tx+5,GROUND_Y-20);ctx.lineTo(tx+12,GROUND_Y-40);ctx.lineTo(tx+24,GROUND_Y-18);ctx.fill();}}
+  else if(s===7){ctx.fillStyle='#999';for(let i=0;i<6;i++){const cx=((i*170-frame*spd*.2)%(GAME_W+200))-40;ctx.beginPath();ctx.arc(cx,40,30,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.arc(cx+25,50,25,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.arc(cx-20,50,20,0,Math.PI*2);ctx.fill();}ctx.strokeStyle='rgba(150,150,160,0.3)';ctx.lineWidth=1;for(let i=0;i<30;i++){const rx=((i*35+frame*1.5)%GAME_W),ry=((i*23)%(GROUND_Y-60))+30;ctx.beginPath();ctx.moveTo(rx,ry);ctx.lineTo(rx-3,ry+10);ctx.stroke();}}
+  else if(s===8){ctx.fillStyle='#888';ctx.beginPath();ctx.moveTo(0,GROUND_Y-50);ctx.lineTo(100,GROUND_Y-70);ctx.lineTo(200,GROUND_Y);ctx.fill();ctx.beginPath();ctx.moveTo(GAME_W,GROUND_Y-40);ctx.lineTo(GAME_W-120,GROUND_Y-80);ctx.lineTo(GAME_W-220,GROUND_Y);ctx.fill();ctx.fillStyle='#666';for(let i=0;i<4;i++){const lx=((i*280-frame*spd*.3)%(GAME_W+300))-40;ctx.beginPath();ctx.moveTo(lx,GROUND_Y-2);ctx.lineTo(lx+20,GROUND_Y-8);ctx.lineTo(lx+30,GROUND_Y-3);ctx.fill();}}
+  else if(s===9){ctx.fillStyle='#999';for(let i=0;i<3;i++){const px=100+i*300;ctx.fillRect(px,GROUND_Y-70,12,70);ctx.fillRect(px-4,GROUND_Y-75,20,8);}ctx.fillStyle='#ccc';ctx.beginPath();ctx.arc(700,60,40,0,Math.PI*2);ctx.fill();ctx.fillStyle='#ddd';ctx.beginPath();ctx.arc(700,60,25,0,Math.PI*2);ctx.fill();}
 }
 
-// ─── PARTY BACKGROUND (stage 10 end) ───
 function drawPartyBG(alpha) {
-  // colorful bunting / streamers
-  const colors = ['#ffd700','#ff6b6b','#51cf66','#339af0','#ff922b','#f06595'];
-  for (let i=0; i<8; i++) {
-    const bx = ((i*120 - frame*1.5) % (GAME_W+150)) - 30;
-    const by = 20 + (i%3)*25;
-    ctx.fillStyle = colors[i%6];
-    ctx.globalAlpha = alpha * 0.5;
-    ctx.beginPath(); ctx.arc(bx, by, 12, 0, Math.PI*2); ctx.fill();
-    ctx.beginPath(); ctx.arc(bx+30, by+15, 10, 0, Math.PI*2); ctx.fill();
-  }
-  // sparkles
-  for (let i=0; i<15; i++) {
-    const sx = ((i*65 + frame*2) % GAME_W);
-    const sy = 20 + ((i*37) % (GROUND_Y-60));
-    ctx.fillStyle = colors[i%6];
-    ctx.globalAlpha = alpha * 0.6 * (0.5+Math.sin(frame*0.1+i)*0.5);
-    ctx.fillRect(sx, sy, 3, 3);
-  }
-  ctx.globalAlpha = 1;
+  const colors=['#ffd700','#ff6b6b','#51cf66','#339af0','#ff922b','#f06595'];
+  for(let i=0;i<8;i++){const bx=((i*120-frame*1.5)%(GAME_W+150))-30,by=20+(i%3)*25;ctx.fillStyle=colors[i%6];ctx.globalAlpha=alpha*.5;ctx.beginPath();ctx.arc(bx,by,12,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.arc(bx+30,by+15,10,0,Math.PI*2);ctx.fill();}
+  for(let i=0;i<15;i++){const sx=((i*65+frame*2)%GAME_W),sy=20+((i*37)%(GROUND_Y-60));ctx.fillStyle=colors[i%6];ctx.globalAlpha=alpha*.6*(.5+Math.sin(frame*.1+i)*.5);ctx.fillRect(sx,sy,3,3);}
+  ctx.globalAlpha=1;
 }
 
-// ─── DRAW GROUND DECORATIONS ───
+// ─── GROUND ───
 const pebbles = [];
-for (let i = 0; i < 20; i++) pebbles.push({ x: Math.random()*GAME_W, s: 1+Math.random()*2 });
+for (let i=0;i<20;i++) pebbles.push({x:Math.random()*GAME_W,s:1+Math.random()*2});
 
 function drawGround() {
-  ctx.fillStyle = '#535353';
-  ctx.fillRect(0, GROUND_Y+2, GAME_W, 2);
-  ctx.fillStyle = '#aaa';
-  const spd = getSpeed();
-  for (let i = ((frame*spd) % 30); i < GAME_W; i += 30) ctx.fillRect(i, GROUND_Y+4, 12, 1);
-  // pebbles
-  ctx.fillStyle = '#ccc';
-  for (let p of pebbles) {
-    p.x -= spd * 0.3;
-    if (p.x < -10) p.x = GAME_W + Math.random()*100;
-    ctx.fillRect(p.x, GROUND_Y+5, p.s, p.s);
-  }
+  ctx.fillStyle='#535353';ctx.fillRect(0,GROUND_Y+2,GAME_W,2);
+  ctx.fillStyle='#aaa';const spd=getSpeed();
+  for(let i=((frame*spd)%30);i<GAME_W;i+=30)ctx.fillRect(i,GROUND_Y+4,12,1);
+  ctx.fillStyle='#ccc';
+  for(let p of pebbles){p.x-=spd*.3;if(p.x<-10)p.x=GAME_W+Math.random()*100;ctx.fillRect(p.x,GROUND_Y+5,p.s,p.s);}
 }
 
-// ─── DRAW OBSTACLES ───
-function drawCactusTall(x) {
-  const by = GROUND_Y; ctx.fillStyle = '#535353';
-  ctx.fillRect(x+9, by-48, 6, 48);
-  ctx.fillRect(x, by-36, 9, 6); ctx.fillRect(x, by-42, 6, 9);
-  ctx.fillRect(x+15, by-39, 9, 6); ctx.fillRect(x+18, by-45, 6, 9);
-  ctx.fillRect(x+9, by-51, 6, 3);
-}
-function drawCactusShort(x) {
-  const by = GROUND_Y; ctx.fillStyle = '#535353';
-  ctx.fillRect(x+9, by-30, 6, 30);
-  ctx.fillRect(x, by-21, 9, 6); ctx.fillRect(x+15, by-24, 9, 6);
-  ctx.fillRect(x+9, by-33, 6, 3);
-}
-function drawRock(x) {
-  const by = GROUND_Y;
-  ctx.fillStyle = '#888';
-  ctx.beginPath(); ctx.moveTo(x,by); ctx.lineTo(x+6,by-21); ctx.lineTo(x+12,by-30);
-  ctx.lineTo(x+21,by-30); ctx.lineTo(x+27,by-21); ctx.lineTo(x+33,by-9); ctx.lineTo(x+36,by); ctx.fill();
-  ctx.fillStyle = '#999'; ctx.fillRect(x+9,by-18,15,9);
-}
-function drawTree(x) {
-  const by = GROUND_Y;
-  // trunk
-  ctx.fillStyle = '#8B6914';
-  ctx.fillRect(x+15, by-48, 8, 48);
-  // leaves (3 tiers)
-  ctx.fillStyle = '#3a7d3a';
-  ctx.beginPath(); ctx.moveTo(x+4, by-30); ctx.lineTo(x+19, by-58); ctx.lineTo(x+34, by-30); ctx.fill();
-  ctx.fillStyle = '#2d6b2d';
-  ctx.beginPath(); ctx.moveTo(x+7, by-22); ctx.lineTo(x+19, by-42); ctx.lineTo(x+31, by-22); ctx.fill();
-  ctx.fillStyle = '#348a34';
-  ctx.beginPath(); ctx.moveTo(x+10, by-15); ctx.lineTo(x+19, by-30); ctx.lineTo(x+28, by-15); ctx.fill();
-  // trunk shadow
-  ctx.fillStyle = '#7a5a10';
-  ctx.fillRect(x+14, by-40, 3, 38);
-}
+// ─── OBSTACLES ───
+function drawCactusTall(x){const by=GROUND_Y;ctx.fillStyle='#535353';ctx.fillRect(x+9,by-48,6,48);ctx.fillRect(x,by-36,9,6);ctx.fillRect(x,by-42,6,9);ctx.fillRect(x+15,by-39,9,6);ctx.fillRect(x+18,by-45,6,9);ctx.fillRect(x+9,by-51,6,3);}
+function drawCactusShort(x){const by=GROUND_Y;ctx.fillStyle='#535353';ctx.fillRect(x+9,by-30,6,30);ctx.fillRect(x,by-21,9,6);ctx.fillRect(x+15,by-24,9,6);ctx.fillRect(x+9,by-33,6,3);}
+function drawRock(x){const by=GROUND_Y;ctx.fillStyle='#888';ctx.beginPath();ctx.moveTo(x,by);ctx.lineTo(x+6,by-21);ctx.lineTo(x+12,by-30);ctx.lineTo(x+21,by-30);ctx.lineTo(x+27,by-21);ctx.lineTo(x+33,by-9);ctx.lineTo(x+36,by);ctx.fill();ctx.fillStyle='#999';ctx.fillRect(x+9,by-18,15,9);}
+function drawTree(x){const by=GROUND_Y;ctx.fillStyle='#8B6914';ctx.fillRect(x+15,by-48,8,48);ctx.fillStyle='#3a7d3a';ctx.beginPath();ctx.moveTo(x+4,by-30);ctx.lineTo(x+19,by-58);ctx.lineTo(x+34,by-30);ctx.fill();ctx.fillStyle='#2d6b2d';ctx.beginPath();ctx.moveTo(x+7,by-22);ctx.lineTo(x+19,by-42);ctx.lineTo(x+31,by-22);ctx.fill();ctx.fillStyle='#348a34';ctx.beginPath();ctx.moveTo(x+10,by-15);ctx.lineTo(x+19,by-30);ctx.lineTo(x+28,by-15);ctx.fill();ctx.fillStyle='#7a5a10';ctx.fillRect(x+14,by-40,3,38);}
 
 // ─── SPEED LINES ───
-function drawSpeedLines() {
-  const spd = getSpeed();
-  if (spd < 6) return;
-  const alpha = Math.min((spd-6)/3, 0.5);
-  if (frame % 3 === 0 && speedLines.length < 15) {
-    speedLines.push({ x: GAME_W, y: 30 + Math.random()*(GROUND_Y-80), len: 20+Math.random()*40, life: 20 });
-  }
-  for (let s of speedLines) {
-    s.x -= spd * 1.2; s.life--;
-    ctx.strokeStyle = `rgba(180,190,200,${alpha * s.life/20})`;
-    ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.moveTo(s.x, s.y); ctx.lineTo(s.x+s.len, s.y); ctx.stroke();
-  }
-  speedLines = speedLines.filter(s => s.life > 0 && s.x > -60);
-}
+function drawSpeedLines(){const spd=getSpeed();if(spd<6)return;const alpha=Math.min((spd-6)/3,.5);if(frame%3===0&&speedLines.length<15)speedLines.push({x:GAME_W,y:30+Math.random()*(GROUND_Y-80),len:20+Math.random()*40,life:20});for(let s of speedLines){s.x-=spd*1.2;s.life--;ctx.strokeStyle=`rgba(180,190,200,${alpha*s.life/20})`;ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(s.x,s.y);ctx.lineTo(s.x+s.len,s.y);ctx.stroke();}speedLines=speedLines.filter(s=>s.life>0&&s.x>-60);}
 
 // ─── DRAW ───
-function drawScene() {
-  ctx.clearRect(0, 0, GAME_W, GAME_H);
-  const s = Math.min(stage-1,9);
-  const sbg = STAGE_BG[s];
-  ctx.fillStyle = sbg;
-  ctx.fillRect(0, 0, GAME_W, GAME_H);
-
-  // Transition progress (last 2 obstacles show next stage's bg)
-  const progress = obstaclesPassed >= OBS_CLEAR-2 ? (obstaclesPassed - (OBS_CLEAR-2)) / 2 : 0;
-  const nextS = Math.min(s+1, 9);
-
-  drawMountains();
-  drawStageScenery(s);
-
-  // Blend in next stage scenery
-  if (progress > 0 && s < 9) {
-    ctx.globalAlpha = progress;
-    drawStageScenery(nextS);
-    ctx.globalAlpha = 1;
+function drawScene(){
+  ctx.clearRect(0,0,GAME_W,GAME_H);
+  const s=Math.min(stage-1,9);
+  ctx.fillStyle=STAGE_BG[s];ctx.fillRect(0,0,GAME_W,GAME_H);
+  const progress=obstaclesPassed>=OBS_CLEAR-2?(obstaclesPassed-(OBS_CLEAR-2))/2:0;
+  const nextS=Math.min(s+1,9);
+  drawMountains();drawStageScenery(s);
+  if(progress>0&&s<9){ctx.globalAlpha=progress;drawStageScenery(nextS);ctx.globalAlpha=1;}
+  if(s===9&&progress>0)drawPartyBG(progress);
+  drawGround();drawSpeedLines();
+  const runFrame=Math.floor(frame/6)%2===0;
+  drawCurrentDino(dino.x,dino.y,runFrame,dino.jumping);
+  for(let o of obstacles){
+    if(o.type==='cactusTall')drawCactusTall(o.x);
+    else if(o.type==='cactusShort')drawCactusShort(o.x);
+    else if(o.type==='rock')drawRock(o.x);
+    else if(o.type==='tree')drawTree(o.x);
   }
-
-  // Stage 10: party celebration in the final stretch
-  if (s === 9 && progress > 0) {
-    drawPartyBG(progress);
-  }
-  drawGround();
-  drawSpeedLines();
-
-  const runFrame = Math.floor(frame/6)%2===0;
-  drawCurrentDino(dino.x, dino.y, runFrame, dino.jumping);
-
-  for (let o of obstacles) {
-    if (o.type==='cactusTall') drawCactusTall(o.x);
-    else if (o.type==='cactusShort') drawCactusShort(o.x);
-    else if (o.type==='rock') drawRock(o.x);
-    else if (o.type==='tree') drawTree(o.x);
-  }
-
-  // dust particles
-  if (!dino.jumping && frame%2===0) {
-    particles.push({ x:dino.x+6, y:GROUND_Y, vx:-1-Math.random(), vy:-1-Math.random()*1.5, life:8+Math.random()*6, maxLife:14, size:1+Math.random()*2 });
-  }
-
-  for (let p of particles) {
-    const a = p.life/p.maxLife;
-    ctx.fillStyle = `rgba(180,180,180,${a})`; ctx.fillRect(p.x, p.y, p.size, p.size);
-  }
-
-  // confetti (celebration)
-  for (let c of confetti) {
-    ctx.fillStyle = c.color;
-    ctx.fillRect(c.x, c.y, c.size, c.size);
-  }
-
-  // score popups
-  for (let pu of popups) {
-    const a = pu.life/pu.maxLife;
-    ctx.fillStyle = `rgba(83,83,83,${a})`;
-    ctx.font = 'bold 11px "Courier New"';
-    ctx.fillText(pu.text, pu.x, pu.y);
-  }
-
-  // stage flash
-  if (stageFlash > 0) {
-    const a = stageFlash/30;
-    ctx.fillStyle = `rgba(255,255,255,${a*0.3})`;
-    ctx.fillRect(0, 0, GAME_W, GAME_H);
-  }
-
-  // star particles (⭐ cartoon stars on death)
-  for (let s of starParticles) {
-    ctx.save();
-    ctx.translate(s.x, s.y);
-    ctx.rotate(s.rot);
-    ctx.fillStyle = '#ffd700';
-    const sz = s.size;
-    // draw a 4-point star
-    ctx.beginPath();
-    for (let i=0; i<4; i++) {
-      const a = (i*Math.PI)/2;
-      ctx.lineTo(Math.cos(a)*sz*2, Math.sin(a)*sz*2);
-      ctx.lineTo(Math.cos(a+Math.PI/4)*sz, Math.sin(a+Math.PI/4)*sz);
-    }
-    ctx.fill();
-    ctx.restore();
-  }
+  if(!dino.jumping&&frame%2===0)particles.push({x:dino.x+6,y:GROUND_Y,vx:-1-Math.random(),vy:-1-Math.random()*1.5,life:8+Math.random()*6,maxLife:14,size:1+Math.random()*2});
+  for(let p of particles){const a=p.life/p.maxLife;ctx.fillStyle=`rgba(180,180,180,${a})`;ctx.fillRect(p.x,p.y,p.size,p.size);}
+  for(let c of confetti){ctx.fillStyle=c.color;ctx.fillRect(c.x,c.y,c.size,c.size);}
+  for(let pu of popups){const a=pu.life/pu.maxLife;ctx.fillStyle=`rgba(83,83,83,${a})`;ctx.font='bold 11px "Courier New"';ctx.fillText(pu.text,pu.x,pu.y);}
+  if(stageFlash>0){const a=stageFlash/30;ctx.fillStyle=`rgba(255,255,255,${a*.3})`;ctx.fillRect(0,0,GAME_W,GAME_H);}
+  for(let s of starParticles){ctx.save();ctx.translate(s.x,s.y);ctx.rotate(s.rot);ctx.fillStyle='#ffd700';const sz=s.size;ctx.beginPath();for(let i=0;i<4;i++){const a=(i*Math.PI)/2;ctx.lineTo(Math.cos(a)*sz*2,Math.sin(a)*sz*2);ctx.lineTo(Math.cos(a+Math.PI/4)*sz,Math.sin(a+Math.PI/4)*sz);}ctx.fill();ctx.restore();}
 }
 
-function drawOverlay() {
-  ctx.fillStyle = 'rgba(255,255,255,0.88)';
-  ctx.fillRect(0, 0, GAME_W, GAME_H);
-  ctx.textAlign = 'center';
-
-  if (gameState==='waiting') {
-    // Dino selection UI
-    const dt = DINO_TYPES[dinoType];
-    drawCurrentDino(GAME_W/2-18, GROUND_Y, true, false);
-    // left/right arrows
-    ctx.fillStyle = '#ccc';
-    ctx.font = 'bold 28px "Courier New"';
-    ctx.fillText('◀', GAME_W/2-120, GROUND_Y-30);
-    ctx.fillText('▶', GAME_W/2+105, GROUND_Y-30);
-    // dino name
-    ctx.fillStyle = '#535353';
-    ctx.font = 'bold 22px "Courier New"';
-    ctx.fillText('DINO RUNNER', GAME_W/2, GROUND_Y-80);
-    ctx.font = 'bold 15px "Courier New"';
-    ctx.fillText(`${dt.emoji} ${dt.name}`, GAME_W/2, GROUND_Y-58);
-    ctx.fillStyle = '#999';
-    ctx.font = '11px "Courier New"';
-    ctx.fillText('◀ ▶ 로 선택 · TAP TO START', GAME_W/2, GROUND_Y+12);
-  } else if (gameState==='stageClear') {
-    if (stage >= 11) {
-      // ── ENDING: ALL STAGES CLEARED! ──
-      ctx.fillStyle = 'rgba(0,0,0,0.75)';
-      ctx.fillRect(0, 0, GAME_W, GAME_H);
-      ctx.fillStyle = '#ffd700';
-      ctx.font = 'bold 30px "Courier New"';
-      ctx.fillText('🎉 ALL CLEAR! 🎉', GAME_W/2, GAME_H/2-35);
-      ctx.fillStyle = '#fff';
-      ctx.font = '15px "Courier New"';
-      ctx.fillText('모든 스테이지를 클리어했습니다!', GAME_W/2, GAME_H/2);
-      ctx.font = '13px "Courier New"';
-      ctx.fillText(`FINAL SCORE: ${score}`, GAME_W/2, GAME_H/2+25);
-      ctx.fillStyle = '#ccc';
-      ctx.font = '12px "Courier New"';
-      ctx.fillText('🦖 🦏 🦅 🦇 THANK YOU FOR PLAYING!', GAME_W/2, GAME_H/2+50);
-      ctx.font = '11px "Courier New"';
-      ctx.fillText('TAP TO PLAY AGAIN', GAME_W/2, GAME_H/2+72);
+function drawOverlay(){
+  ctx.textAlign='center';
+  if(gameState==='waiting'){
+    const dt=DINO_TYPES[dinoType];
+    ctx.fillStyle='rgba(255,255,255,0.82)';ctx.fillRect(0,0,GAME_W,GAME_H);
+    drawCurrentDino(GAME_W/2-18,GROUND_Y,true,false);
+    ctx.fillStyle='#535353';ctx.font='bold 22px "Courier New"';ctx.fillText('DINO RUNNER',GAME_W/2,GROUND_Y-80);
+    ctx.fillStyle='#666';ctx.font='bold 16px "Courier New"';ctx.fillText(`${dt.emoji} ${dt.name}`,GAME_W/2,GROUND_Y-56);
+  } else if(gameState==='stageClear'){
+    if(stage>=11){
+      ctx.fillStyle='rgba(0,0,0,0.75)';ctx.fillRect(0,0,GAME_W,GAME_H);
+      ctx.fillStyle='#ffd700';ctx.font='bold 30px "Courier New"';ctx.fillText('🎉 ALL CLEAR! 🎉',GAME_W/2,GAME_H/2-35);
+      ctx.fillStyle='#fff';ctx.font='15px "Courier New"';ctx.fillText('모든 스테이지를 클리어했습니다!',GAME_W/2,GAME_H/2);
+      ctx.font='13px "Courier New"';ctx.fillText(`FINAL SCORE: ${score}`,GAME_W/2,GAME_H/2+25);
+      ctx.fillStyle='#ccc';ctx.font='12px "Courier New"';ctx.fillText('🦖 🦏 🦅 🦇 THANK YOU FOR PLAYING!',GAME_W/2,GAME_H/2+50);
+      ctx.font='11px "Courier New"';ctx.fillText('TAP TO PLAY AGAIN',GAME_W/2,GAME_H/2+72);
     } else {
-    // ── CELEBRATION THEME ──
-    ctx.fillStyle = 'rgba(255,255,255,0.82)';
-    ctx.fillRect(0, 0, GAME_W, GAME_H);
-    ctx.fillStyle = '#ffd700';
-    ctx.fillRect(GAME_W/2-160, GAME_H/2-42, 320, 84);
-    ctx.fillStyle = '#b8960f';
-    ctx.fillRect(GAME_W/2-160, GAME_H/2-42, 320, 4);
-    ctx.fillRect(GAME_W/2-160, GAME_H/2+38, 320, 4);
-    ctx.fillStyle = '#fff';
-    ctx.font = 'bold 22px "Courier New"';
-    ctx.fillText(`🏆 STAGE ${stage-1} CLEAR!`, GAME_W/2, GAME_H/2-12);
-    ctx.fillStyle = '#f5f0d0';
-    ctx.font = '13px "Courier New"';
-    const nextName = STAGE_NAMES[Math.min(stage-1,9)];
-    ctx.fillText(`NEXT: ${nextName}`, GAME_W/2, GAME_H/2+14);
-    ctx.fillStyle = '#fff';
-    ctx.font = '11px "Courier New"';
-    ctx.fillText('TAP TO CONTINUE', GAME_W/2, GAME_H/2+32);
+      ctx.fillStyle='rgba(255,255,255,0.82)';ctx.fillRect(0,0,GAME_W,GAME_H);
+      ctx.fillStyle='#ffd700';ctx.fillRect(GAME_W/2-160,GAME_H/2-42,320,84);
+      ctx.fillStyle='#b8960f';ctx.fillRect(GAME_W/2-160,GAME_H/2-42,320,4);ctx.fillRect(GAME_W/2-160,GAME_H/2+38,320,4);
+      ctx.fillStyle='#fff';ctx.font='bold 22px "Courier New"';ctx.fillText(`🏆 STAGE ${stage-1} CLEAR!`,GAME_W/2,GAME_H/2-12);
+      ctx.fillStyle='#f5f0d0';ctx.font='13px "Courier New"';ctx.fillText(`NEXT: ${STAGE_NAMES[Math.min(stage-1,9)]}`,GAME_W/2,GAME_H/2+14);
+      ctx.fillStyle='#fff';ctx.font='11px "Courier New"';ctx.fillText('TAP TO CONTINUE',GAME_W/2,GAME_H/2+32);
     }
-  } else if (gameState==='gameOver') {
-    // ── FAILURE THEME ──
-    ctx.fillStyle = 'rgba(40,40,40,0.88)';
-    ctx.fillRect(0, 0, GAME_W, GAME_H);
-    ctx.fillStyle = '#ff4444';
-    ctx.font = 'bold 24px "Courier New"';
-    ctx.fillText('G A M E  O V E R', GAME_W/2, GAME_H/2-20);
-    ctx.fillStyle = '#ccc';
-    ctx.font = '13px "Courier New"';
-    ctx.fillText(`SCORE: ${score}  |  HI: ${hiScore}`, GAME_W/2, GAME_H/2+10);
-    ctx.font = '12px "Courier New"';
-    ctx.fillText('TAP TO RESTART', GAME_W/2, GAME_H/2+35);
+  } else if(gameState==='gameOver'){
+    ctx.fillStyle='rgba(40,40,40,0.88)';ctx.fillRect(0,0,GAME_W,GAME_H);
+    ctx.fillStyle='#ff4444';ctx.font='bold 24px "Courier New"';ctx.fillText('G A M E  O V E R',GAME_W/2,GAME_H/2-20);
+    ctx.fillStyle='#ccc';ctx.font='13px "Courier New"';ctx.fillText(`SCORE: ${score}  |  HI: ${hiScore}`,GAME_W/2,GAME_H/2+10);
+    ctx.font='12px "Courier New"';ctx.fillText('TAP TO RESTART',GAME_W/2,GAME_H/2+35);
   }
-  ctx.textAlign = 'start';
+  ctx.textAlign='start';
 }
 
 // ─── STAGE CONFIG ───
-function getSpeed() {
-  return [3.5, 4.0, 4.5, 5.0, 5.5, 6.0, 6.5, 7.5, 8.5, 9.0][Math.min(stage-1,9)];
-}
-function getGap() {
-  const g = [[180,280],[170,260],[150,240],[130,210],[110,190],[95,170],[80,150],[70,135],[60,120],[55,105]][Math.min(stage-1,9)];
-  return g[0]+Math.random()*(g[1]-g[0]);
-}
+function getSpeed(){return[3.5,4.0,4.5,5.0,5.5,6.0,6.5,7.5,8.5,9.0][Math.min(stage-1,9)];}
+function getGap(){const g=[[180,280],[170,260],[150,240],[130,210],[110,190],[95,170],[80,150],[70,135],[60,120],[55,105]][Math.min(stage-1,9)];return g[0]+Math.random()*(g[1]-g[0]);}
 
-function maybeSpawnObstacle() {
-  obstacleTimer--;
-  if (obstacleTimer > 0) return;
-  const gap = getGap();
-  if (obstacles.length>0) {
-    const last = obstacles[obstacles.length-1];
-    if (last.x + last.w + gap > GAME_W) return;
-  }
-
-  // Force TREE as the final obstacle of each stage
+function maybeSpawnObstacle(){
+  obstacleTimer--;if(obstacleTimer>0)return;
+  const gap=getGap();
+  if(obstacles.length>0){const last=obstacles[obstacles.length-1];if(last.x+last.w+gap>GAME_W)return;}
   let t;
-  if (obstaclesSpawned >= OBS_CLEAR - 1) {
-    t = 'tree';
-  } else {
-    const types = STAGE_OBSTACLES[Math.min(stage-1,9)];
-    t = types[Math.floor(Math.random()*types.length)];
-  }
-  const widths = {cactusTall:48, cactusShort:42, rock:54, tree:60};
-  obstacles.push({x:GAME_W, type:t, w:widths[t], passed:false});
-  obstaclesSpawned++;
-  const delay = stage<=3 ? 25+Math.floor(Math.random()*15) : stage<=6 ? 18+Math.floor(Math.random()*12) : 12+Math.floor(Math.random()*10);
-  obstacleTimer = delay;
+  if(obstaclesSpawned>=OBS_CLEAR-1){t='tree';}
+  else{const types=STAGE_OBSTACLES[Math.min(stage-1,9)];t=types[Math.floor(Math.random()*types.length)];}
+  const widths={cactusTall:48,cactusShort:42,rock:54,tree:60};
+  obstacles.push({x:GAME_W,type:t,w:widths[t],passed:false});obstaclesSpawned++;
+  const delay=stage<=3?25+Math.floor(Math.random()*15):stage<=6?18+Math.floor(Math.random()*12):12+Math.floor(Math.random()*10);
+  obstacleTimer=delay;
 }
 
-// ─── COLLISION ───
-function checkCollision() {
-  const dB = {x:dino.x+18, y:dino.y-32, w:16, h:28};
-  for (let o of obstacles) {
+function checkCollision(){
+  const dB={x:dino.x+18,y:dino.y-32,w:16,h:28};
+  for(let o of obstacles){
     let oB;
-    if (o.type==='cactusTall')   oB = {x:o.x+10, y:GROUND_Y-42, w:10, h:42};
-    else if (o.type==='cactusShort') oB = {x:o.x+9, y:GROUND_Y-24, w:10, h:24};
-    else if (o.type==='rock')    oB = {x:o.x+16, y:GROUND_Y-24, w:14, h:24};
-    else /* tree */              oB = {x:o.x+14, y:GROUND_Y-42, w:10, h:42};
-    if (dB.x<oB.x+oB.w && dB.x+dB.w>oB.x && dB.y<oB.y+oB.h && dB.y+dB.h>oB.y) return true;
+    if(o.type==='cactusTall')oB={x:o.x+10,y:GROUND_Y-42,w:10,h:42};
+    else if(o.type==='cactusShort')oB={x:o.x+9,y:GROUND_Y-24,w:10,h:24};
+    else if(o.type==='rock')oB={x:o.x+16,y:GROUND_Y-24,w:14,h:24};
+    else oB={x:o.x+14,y:GROUND_Y-42,w:10,h:42};
+    if(dB.x<oB.x+oB.w&&dB.x+dB.w>oB.x&&dB.y<oB.y+oB.h&&dB.y+dB.h>oB.y)return true;
   }
   return false;
 }
 
-function spawnParticles(x,y,count,color) {
-  for (let i=0;i<count;i++) particles.push({
-    x,y, vx:(Math.random()-.5)*4, vy:-2-Math.random()*4,
-    life:15+Math.random()*20, maxLife:35, size:2+Math.floor(Math.random()*4)
-  });
-}
-
-function addPopup(x,y,text) {
-  popups.push({x,y,text,life:30,maxLife:30});
-}
+function spawnParticles(x,y,count){for(let i=0;i<count;i++)particles.push({x,y,vx:(Math.random()-.5)*4,vy:-2-Math.random()*4,life:15+Math.random()*20,maxLife:35,size:2+Math.floor(Math.random()*4)});}
+function addPopup(x,y,text){popups.push({x,y,text,life:30,maxLife:30});}
 
 // ─── UPDATE ───
-const OBS_CLEAR = 7;
-function update() {
-  // input lock countdown (even when not playing)
-  if (inputLockTimer > 0) inputLockTimer--;
-  // landing squish decay
-  if (landingSquish > 0) landingSquish--;
-
-  if (gameState!=='playing') {
-    // still animate particles/confetti during overlays
-    confetti = confetti.filter(c => { c.x += c.vx; c.y += c.vy; c.vy += 0.15; c.life--; return c.life > 0; });
-    starParticles = starParticles.filter(s => { s.x += s.vx; s.y += s.vy; s.vy += 0.1; s.rot += 0.15; s.life--; return s.life > 0; });
-    particles = particles.filter(p => { p.x += p.vx; p.y += p.vy; p.life--; return p.life > 0; });
+const OBS_CLEAR=7;
+function update(){
+  if(inputLockTimer>0)inputLockTimer--;
+  if(landingSquish>0)landingSquish--;
+  if(gameState!=='playing'){
+    confetti=confetti.filter(c=>{c.x+=c.vx;c.y+=c.vy;c.vy+=0.15;c.life--;return c.life>0;});
+    starParticles=starParticles.filter(s=>{s.x+=s.vx;s.y+=s.vy;s.vy+=0.1;s.rot+=0.15;s.life--;return s.life>0;});
+    particles=particles.filter(p=>{p.x+=p.vx;p.y+=p.vy;p.life--;return p.life>0;});
     return;
   }
   frame++;
-
-  // shake decay
-  if (shakeFrames > 0) {
-    shakeFrames--;
-    shakeX = (Math.random()-0.5) * shakeFrames * 0.7;
-    shakeY = (Math.random()-0.5) * shakeFrames * 0.7;
-  } else { shakeX = 0; shakeY = 0; }
-
-  // stage flash
-  if (stageFlash > 0) stageFlash--;
-
-  // jump physics
-  if (dino.jumping) {
-    dino.vy += dino.gravity;
-    dino.y += dino.vy;
-    if (dino.y >= GROUND_Y) {
-      dino.y = GROUND_Y;
-      dino.vy = 0;
-      if (dino.jumping) landingSquish = 12; // landing bounce!
-      dino.jumping = false;
-      jumpsUsed = 0;
-    }
-  }
-
-  // mountains parallax
-  const spd = getSpeed();
-  for (let m of mountains) {
-    m.x -= spd * 0.15;
-    if (m.x + m.w < -20) { m.x = GAME_W + Math.random()*100; m.h = 40+Math.random()*50; m.w = 80+Math.random()*60; }
-  }
-
+  if(shakeFrames>0){shakeFrames--;shakeX=(Math.random()-.5)*shakeFrames*.7;shakeY=(Math.random()-.5)*shakeFrames*.7;}else{shakeX=0;shakeY=0;}
+  if(stageFlash>0)stageFlash--;
+  if(dino.jumping){dino.vy+=dino.gravity;dino.y+=dino.vy;if(dino.y>=GROUND_Y){dino.y=GROUND_Y;dino.vy=0;if(dino.jumping)landingSquish=12;dino.jumping=false;jumpsUsed=0;}}
+  const spd=getSpeed();
+  for(let m of mountains){m.x-=spd*.15;if(m.x+m.w<-20){m.x=GAME_W+Math.random()*100;m.h=40+Math.random()*50;m.w=80+Math.random()*60;}}
   maybeSpawnObstacle();
-  for (let o of obstacles) {
-    o.x -= spd;
-    if (!o.passed && o.x+o.w < dino.x) {
-      o.passed = true;
-      obstaclesPassed++;
-      score += 10;
-      addPopup(o.x + o.w/2, GROUND_Y - 60, '+10');
-    }
-  }
-  obstacles = obstacles.filter(o => o.x + o.w > -80);
-
-  if (checkCollision()) {
-    gameState = 'gameOver';
-    inputLockTimer = 90; // 1.5s before can tap
-    spawnParticles(dino.x+21, dino.y-25, 25);
-    shakeFrames = 18;
-    // Cartoon stars spinning around head
-    for (let i=0;i<8;i++) {
-      starParticles.push({
-        x: dino.x+21, y: dino.y-40,
-        vx: (Math.random()-0.5)*3, vy: -2-Math.random()*4,
-        life: 60, maxLife: 60, rot: Math.random()*Math.PI*2, size: 3+Math.floor(Math.random()*3)
-      });
-    }
-    addPopup(dino.x+21, dino.y-55, 'BONK!');
-    if (score > hiScore) { hiScore = score; localStorage.setItem('dinoHi', hiScore); }
-  }
-
-  if (obstaclesPassed >= OBS_CLEAR) {
-    gameState = 'stageClear';
-    inputLockTimer = 90;
-    if (stage < 10) stage++; else stage = 11; // stage 11 = ending
-    stageFlash = 30;
-    // Celebration confetti burst!
-    const colors = ['#ffd700','#ff6b6b','#51cf66','#339af0','#ff922b','#f06595','#20c997','#cc5de8'];
-    for (let i=0;i<60;i++) {
-      confetti.push({
-        x: GAME_W/2, y: GAME_H/2,
-        vx: (Math.random()-0.5)*10, vy: -3-Math.random()*8,
-        life: 40+Math.random()*40, maxLife: 80,
-        size: 3+Math.floor(Math.random()*5),
-        color: colors[Math.floor(Math.random()*colors.length)]
-      });
-    }
-  }
-
-  // update particles
-  particles = particles.filter(p => { p.x += p.vx; p.y += p.vy; p.life--; return p.life > 0; });
-  popups = popups.filter(pu => { pu.y -= 0.7; pu.life--; return pu.life > 0; });
-  confetti = confetti.filter(c => { c.x += c.vx; c.y += c.vy; c.vy += 0.15; c.life--; return c.life > 0; });
-  starParticles = starParticles.filter(s => { s.x += s.vx; s.y += s.vy; s.vy += 0.1; s.rot += 0.15; s.life--; return s.life > 0; });
-
-  document.getElementById('score').textContent = String(score).padStart(5,'0');
-  document.getElementById('hi').textContent = String(hiScore).padStart(5,'0');
-  document.getElementById('stg').textContent = Math.min(stage,10);
+  for(let o of obstacles){o.x-=spd;if(!o.passed&&o.x+o.w<dino.x){o.passed=true;obstaclesPassed++;score+=10;addPopup(o.x+o.w/2,GROUND_Y-60,'+10');}}
+  obstacles=obstacles.filter(o=>o.x+o.w>-80);
+  if(checkCollision()){gameState='gameOver';inputLockTimer=90;hideSelectionUI();spawnParticles(dino.x+21,dino.y-25,25);shakeFrames=18;for(let i=0;i<8;i++)starParticles.push({x:dino.x+21,y:dino.y-40,vx:(Math.random()-.5)*3,vy:-2-Math.random()*4,life:60,maxLife:60,rot:Math.random()*Math.PI*2,size:3+Math.floor(Math.random()*3)});addPopup(dino.x+21,dino.y-55,'BONK!');if(score>hiScore){hiScore=score;localStorage.setItem('dinoHi',hiScore);}}
+  if(obstaclesPassed>=OBS_CLEAR){gameState='stageClear';inputLockTimer=90;hideSelectionUI();if(stage<10)stage++;else stage=11;stageFlash=30;const colors=['#ffd700','#ff6b6b','#51cf66','#339af0','#ff922b','#f06595','#20c997','#cc5de8'];for(let i=0;i<60;i++)confetti.push({x:GAME_W/2,y:GAME_H/2,vx:(Math.random()-.5)*10,vy:-3-Math.random()*8,life:40+Math.random()*40,maxLife:80,size:3+Math.floor(Math.random()*5),color:colors[Math.floor(Math.random()*colors.length)]});}
+  particles=particles.filter(p=>{p.x+=p.vx;p.y+=p.vy;p.life--;return p.life>0;});
+  popups=popups.filter(pu=>{pu.y-=0.7;pu.life--;return pu.life>0;});
+  confetti=confetti.filter(c=>{c.x+=c.vx;c.y+=c.vy;c.vy+=0.15;c.life--;return c.life>0;});
+  starParticles=starParticles.filter(s=>{s.x+=s.vx;s.y+=s.vy;s.vy+=0.1;s.rot+=0.15;s.life--;return s.life>0;});
+  document.getElementById('score').textContent=String(score).padStart(5,'0');
+  document.getElementById('hi').textContent=String(hiScore).padStart(5,'0');
+  document.getElementById('stg').textContent=Math.min(stage,10);
 }
 
-function draw() {
-  ctx.save();
-  if (shakeFrames > 0) ctx.translate(shakeX, shakeY);
-  drawScene();
-  ctx.restore();
-  if (gameState !== 'playing') drawOverlay();
-  // confetti on top during clear/ending
-  if (gameState === 'stageClear') {
-    for (let c of confetti) {
-      ctx.fillStyle = c.color; ctx.fillRect(c.x, c.y, c.size, c.size);
-    }
-  }
-  // stars on top of overlay
-  for (let s of starParticles) {
-    ctx.save(); ctx.translate(s.x, s.y); ctx.rotate(s.rot);
-    ctx.fillStyle = '#ffd700'; const sz = s.size;
-    ctx.beginPath();
-    for (let i=0; i<4; i++) {
-      const a = (i*Math.PI)/2;
-      ctx.lineTo(Math.cos(a)*sz*2, Math.sin(a)*sz*2);
-      ctx.lineTo(Math.cos(a+Math.PI/4)*sz, Math.sin(a+Math.PI/4)*sz);
-    }
-    ctx.fill(); ctx.restore();
-  }
+function draw(){
+  ctx.save();if(shakeFrames>0)ctx.translate(shakeX,shakeY);
+  drawScene();ctx.restore();
+  if(gameState!=='playing')drawOverlay();
+  if(gameState==='stageClear'){for(let c of confetti){ctx.fillStyle=c.color;ctx.fillRect(c.x,c.y,c.size,c.size);}}
+  for(let s of starParticles){ctx.save();ctx.translate(s.x,s.y);ctx.rotate(s.rot);ctx.fillStyle='#ffd700';const sz=s.size;ctx.beginPath();for(let i=0;i<4;i++){const a=(i*Math.PI)/2;ctx.lineTo(Math.cos(a)*sz*2,Math.sin(a)*sz*2);ctx.lineTo(Math.cos(a+Math.PI/4)*sz,Math.sin(a+Math.PI/4)*sz);}ctx.fill();ctx.restore();}
 }
-
-function loop() { update(); draw(); requestAnimationFrame(loop); }
+function loop(){update();draw();requestAnimationFrame(loop);}
 
 // ─── RESET ───
-function resetGame(full) {
-  if (full) { stage = 1; score = 0; }
-  obstaclesPassed = 0; obstaclesSpawned = 0; obstacles = []; particles = []; popups = []; confetti = []; speedLines = []; starParticles = [];
-  obstacleTimer = 40; shakeFrames = 0; stageFlash = 0; inputLockTimer = 0;
-  dino.y = GROUND_Y; dino.vy = 0; dino.jumping = false; jumpsUsed = 0;
-  document.getElementById('score').textContent = '00000';
-  document.getElementById('hi').textContent = String(hiScore).padStart(5,'0');
-  document.getElementById('stg').textContent = stage;
+function resetGame(full){
+  if(full){stage=1;score=0;}
+  obstaclesPassed=0;obstaclesSpawned=0;obstacles=[];particles=[];popups=[];confetti=[];speedLines=[];starParticles=[];
+  obstacleTimer=40;shakeFrames=0;stageFlash=0;inputLockTimer=0;
+  dino.y=GROUND_Y;dino.vy=0;dino.jumping=false;jumpsUsed=0;
+  document.getElementById('score').textContent='00000';
+  document.getElementById('hi').textContent=String(hiScore).padStart(5,'0');
+  document.getElementById('stg').textContent=stage;
 }
 
 // ─── INPUT ───
-function doJump() {
-  if (inputLockTimer > 0) return; // block input during result screens
-  if (gameState === 'waiting') { gameState = 'playing'; resetGame(true); return; }
-  if (gameState === 'stageClear') {
-    if (stage >= 11) { resetGame(true); gameState = 'waiting'; return; } // ending → menu
-    resetGame(false); gameState = 'playing'; return;
-  }
-  if (gameState === 'gameOver') { resetGame(true); gameState = 'playing'; return; }
-  if (gameState === 'playing') {
-    if (!dino.jumping) {
-      dino.vy = dino.jumpPower;
-      dino.jumping = true;
-      jumpsUsed = 1;
-    } else if (jumpsUsed === 1 && dino.vy > 0) {
-      // double jump (only when falling, stage 3+)
-      if (stage >= 3) {
-        dino.vy = dino.jumpPower * 0.8;
-        jumpsUsed = 2;
-        spawnParticles(dino.x+21, dino.y-10, 5);
-      }
-    }
-  }
+function doJump(){
+  if(inputLockTimer>0)return;
+  if(gameState==='waiting'){gameState='playing';resetGame(true);hideSelectionUI();return;}
+  if(gameState==='stageClear'){if(stage>=11){resetGame(true);gameState='waiting';showSelectionUI();return;}resetGame(false);gameState='playing';return;}
+  if(gameState==='gameOver'){resetGame(true);gameState='playing';return;}
+  if(gameState==='playing'&&!dino.jumping){dino.vy=dino.jumpPower;dino.jumping=true;jumpsUsed=1;}
+  else if(gameState==='playing'&&jumpsUsed===1&&dino.vy>0&&stage>=3){dino.vy=dino.jumpPower*.8;jumpsUsed=2;spawnParticles(dino.x+21,dino.y-10,5);}
 }
 
-document.addEventListener('touchstart', e => { e.preventDefault(); doJump(); }, {passive:false});
-document.addEventListener('keydown', e => {
-  if (gameState==='waiting') {
-    if (e.code==='ArrowLeft') { dinoType=(dinoType+3)%4; localStorage.setItem('dinoType',dinoType); return; }
-    if (e.code==='ArrowRight') { dinoType=(dinoType+1)%4; localStorage.setItem('dinoType',dinoType); return; }
-  }
-  if (e.code==='Space'||e.code==='ArrowUp') { e.preventDefault(); doJump(); }
+document.addEventListener('keydown',e=>{
+  if(gameState==='waiting'){if(e.code==='ArrowLeft'){cycleDino(-1);return;}if(e.code==='ArrowRight'){cycleDino(1);return;}}
+  if(e.code==='Space'||e.code==='ArrowUp'){e.preventDefault();doJump();}
 });
-canvas.addEventListener('click', e => {
-  e.preventDefault();
-  if (gameState==='waiting') {
-    const rect = canvas.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    if (x < rect.width * 0.3) { dinoType=(dinoType+3)%4; localStorage.setItem('dinoType',dinoType); return; }
-    if (x > rect.width * 0.7) { dinoType=(dinoType+1)%4; localStorage.setItem('dinoType',dinoType); return; }
-  }
-  doJump();
-});
-document.addEventListener('gesturestart', e=>e.preventDefault());
-document.addEventListener('gesturechange', e=>e.preventDefault());
-document.addEventListener('gestureend', e=>e.preventDefault());
+canvas.addEventListener('click',e=>{e.preventDefault();doJump();});
+document.addEventListener('gesturestart',e=>e.preventDefault());
+document.addEventListener('gesturechange',e=>e.preventDefault());
+document.addEventListener('gestureend',e=>e.preventDefault());
 
 resetGame(true);
+showSelectionUI();
 loop();
 </script>
 </body>
