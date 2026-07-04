@@ -245,9 +245,9 @@ function drawScene(){ctx.clearRect(0,0,GAME_W,GAME_H);const s=Math.min(stage-1,1
 }
 
 function drawOverlay(){ctx.textAlign='center';
-  if(gameState==='waiting'){ctx.fillStyle='rgba(255,255,255,0.82)';ctx.fillRect(0,0,GAME_W,GAME_H);drawDino(GAME_W/2-18,GROUND_Y,true,false);ctx.fillStyle='#535353';ctx.font='bold 24px "Courier New"';ctx.fillText('DINO RUN',GAME_W/2,GROUND_Y-95);
-    ctx.fillStyle='#999';ctx.font='10px "Courier New"';ctx.fillText('안나 유빈 우진을 위해 아빠가 만들어준 두 번째 게임',GAME_W/2,GROUND_Y-78);
-    ctx.fillStyle='#666';ctx.font='bold 16px "Courier New"';ctx.fillText(DINO_NAMES[dinoType],GAME_W/2,GROUND_Y-61);
+  if(gameState==='waiting'){ctx.fillStyle='rgba(255,255,255,0.88)';ctx.fillRect(0,0,GAME_W,GAME_H);drawDino(GAME_W/2-18,GROUND_Y,true,false);ctx.fillStyle='#3c3c3c';ctx.font='bold 28px "Courier New"';ctx.fillText('DINO RUN',GAME_W/2,GROUND_Y-100);
+    ctx.fillStyle='#777';ctx.font='bold 12px "Courier New"';ctx.fillText('안나 유빈 우진을 위해 아빠가 만들어준 두 번째 게임',GAME_W/2,GROUND_Y-78);
+    ctx.fillStyle='#535353';ctx.font='bold 16px "Courier New"';ctx.fillText(DINO_NAMES[dinoType],GAME_W/2,GROUND_Y-58);
     if(DINO_PERK_KEYS[dinoType]){ctx.fillStyle='#c8960f';ctx.font='10px "Courier New"';ctx.fillText('⭐ '+DINO_PERKS[dinoType],GAME_W/2,GROUND_Y-47)}
     if(gameMode==='daily'){ctx.fillStyle='#ff922b';ctx.font='bold 13px "Courier New"';ctx.fillText('🔥 데일리 챌린지',GAME_W/2,GROUND_Y-30);ctx.fillStyle='#999';ctx.font='11px "Courier New"';ctx.fillText(`오늘의 최고: ${dailyBest}`,GAME_W/2,GROUND_Y-18)}}
   else if(gameState==='paused'){ctx.fillStyle='rgba(0,0,0,0.7)';ctx.fillRect(0,0,GAME_W,GAME_H);ctx.fillStyle='#fff';ctx.font='bold 26px "Courier New"';ctx.fillText('⏸ 일시정지',GAME_W/2,GAME_H/2-15);ctx.fillStyle='#ccc';ctx.font='14px "Courier New"';ctx.fillText('탭하거나 ▶ 버튼을 눌러 계속',GAME_W/2,GAME_H/2+20)}
