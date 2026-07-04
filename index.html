@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>DINO RUNNER v6</title>
+<title>DINO RUNNER v7</title>
 <style>
   * { margin:0; padding:0; box-sizing:border-box; }
   html, body {
@@ -53,7 +53,7 @@
   <div><span id="score">00000</span></div>
   <div>STAGE <span id="stg">1</span></div>
 </div>
-<div id="ver">v6</div>
+<div id="ver">v7</div>
 <div id="overlay">
   <div id="msg">
     <div class="title" id="msgTitle"></div>
@@ -70,11 +70,12 @@ let gameState = 'waiting';
 let stage = 1, score = 0, obstaclesPassed = 0;
 let hiScore = parseInt(localStorage.getItem('dinoHi')||'0');
 let frame = 0, obstacleTimer = 0;
-let obstacles = [], particles = [], popups = [];
+let obstacles = [], particles = [], popups = [], confetti = [];
 let shakeX = 0, shakeY = 0, shakeFrames = 0;
 let stageFlash = 0;
 let canDoubleJump = false, jumpsUsed = 0;
 let speedLines = [];
+let obstaclesSpawned = 0; // track for last-obstacle logic
 
 // ─── RESIZE ───
 const GAME_W = 900, GAME_H = 300;
@@ -208,6 +209,22 @@ function drawRock(x) {
   ctx.lineTo(x+21,by-30); ctx.lineTo(x+27,by-21); ctx.lineTo(x+33,by-9); ctx.lineTo(x+36,by); ctx.fill();
   ctx.fillStyle = '#999'; ctx.fillRect(x+9,by-18,15,9);
 }
+function drawTree(x) {
+  const by = GROUND_Y;
+  // trunk
+  ctx.fillStyle = '#8B6914';
+  ctx.fillRect(x+15, by-48, 8, 48);
+  // leaves (3 tiers)
+  ctx.fillStyle = '#3a7d3a';
+  ctx.beginPath(); ctx.moveTo(x+4, by-30); ctx.lineTo(x+19, by-58); ctx.lineTo(x+34, by-30); ctx.fill();
+  ctx.fillStyle = '#2d6b2d';
+  ctx.beginPath(); ctx.moveTo(x+7, by-22); ctx.lineTo(x+19, by-42); ctx.lineTo(x+31, by-22); ctx.fill();
+  ctx.fillStyle = '#348a34';
+  ctx.beginPath(); ctx.moveTo(x+10, by-15); ctx.lineTo(x+19, by-30); ctx.lineTo(x+28, by-15); ctx.fill();
+  // trunk shadow
+  ctx.fillStyle = '#7a5a10';
+  ctx.fillRect(x+14, by-40, 3, 38);
+}
 
 // ─── SPEED LINES ───
 function drawSpeedLines() {
@@ -239,18 +256,24 @@ function drawScene() {
   for (let o of obstacles) {
     if (o.type==='cactusTall') drawCactusTall(o.x);
     else if (o.type==='cactusShort') drawCactusShort(o.x);
-    else drawRock(o.x);
+    else if (o.type==='rock') drawRock(o.x);
+    else if (o.type==='tree') drawTree(o.x);
   }
 
-  // dust particles on ground
+  // dust particles
   if (!dino.jumping && frame%2===0) {
     particles.push({ x:dino.x+6, y:GROUND_Y, vx:-1-Math.random(), vy:-1-Math.random()*1.5, life:8+Math.random()*6, maxLife:14, size:1+Math.random()*2 });
   }
 
   for (let p of particles) {
     const a = p.life/p.maxLife;
-    ctx.fillStyle = `rgba(180,180,180,${a})`;
-    ctx.fillRect(p.x, p.y, p.size, p.size);
+    ctx.fillStyle = `rgba(180,180,180,${a})`; ctx.fillRect(p.x, p.y, p.size, p.size);
+  }
+
+  // confetti (celebration)
+  for (let c of confetti) {
+    ctx.fillStyle = c.color;
+    ctx.fillRect(c.x, c.y, c.size, c.size);
   }
 
   // score popups
@@ -282,22 +305,38 @@ function drawOverlay() {
     ctx.font = '13px "Courier New"';
     ctx.fillText('TAP TO START', GAME_W/2, GROUND_Y+10);
   } else if (gameState==='stageClear') {
-    ctx.fillStyle = '#535353';
-    ctx.font = 'bold 20px "Courier New"';
-    ctx.fillText(`STAGE ${stage-1} CLEAR!`, GAME_W/2, GAME_H/2-25);
+    // ── CELEBRATION THEME ──
+    ctx.fillStyle = 'rgba(255,255,255,0.82)';
+    ctx.fillRect(0, 0, GAME_W, GAME_H);
+    // gold banner
+    ctx.fillStyle = '#ffd700';
+    ctx.fillRect(GAME_W/2-160, GAME_H/2-42, 320, 84);
+    ctx.fillStyle = '#b8960f';
+    ctx.fillRect(GAME_W/2-160, GAME_H/2-42, 320, 4);
+    ctx.fillRect(GAME_W/2-160, GAME_H/2+38, 320, 4);
+    // text
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 22px "Courier New"';
+    ctx.fillText(`🏆 STAGE ${stage-1} CLEAR!`, GAME_W/2, GAME_H/2-12);
+    ctx.fillStyle = '#f5f0d0';
     ctx.font = '13px "Courier New"';
     const nextName = STAGE_NAMES[Math.min(stage-1,9)];
-    ctx.fillText(`NEXT: ${nextName}`, GAME_W/2, GAME_H/2+5);
-    ctx.font = '12px "Courier New"';
-    ctx.fillText('TAP TO CONTINUE', GAME_W/2, GAME_H/2+28);
+    ctx.fillText(`NEXT: ${nextName}`, GAME_W/2, GAME_H/2+14);
+    ctx.fillStyle = '#fff';
+    ctx.font = '11px "Courier New"';
+    ctx.fillText('TAP TO CONTINUE', GAME_W/2, GAME_H/2+32);
   } else if (gameState==='gameOver') {
-    ctx.fillStyle = '#535353';
+    // ── FAILURE THEME ──
+    ctx.fillStyle = 'rgba(40,40,40,0.88)';
+    ctx.fillRect(0, 0, GAME_W, GAME_H);
+    ctx.fillStyle = '#ff4444';
     ctx.font = 'bold 24px "Courier New"';
-    ctx.fillText('G A M E  O V E R', GAME_W/2, GAME_H/2-15);
+    ctx.fillText('G A M E  O V E R', GAME_W/2, GAME_H/2-20);
+    ctx.fillStyle = '#ccc';
     ctx.font = '13px "Courier New"';
-    ctx.fillText(`SCORE: ${score}  HI: ${hiScore}`, GAME_W/2, GAME_H/2+15);
+    ctx.fillText(`SCORE: ${score}  |  HI: ${hiScore}`, GAME_W/2, GAME_H/2+10);
     ctx.font = '12px "Courier New"';
-    ctx.fillText('TAP TO RESTART', GAME_W/2, GAME_H/2+38);
+    ctx.fillText('TAP TO RESTART', GAME_W/2, GAME_H/2+35);
   }
   ctx.textAlign = 'start';
 }
@@ -319,10 +358,18 @@ function maybeSpawnObstacle() {
     const last = obstacles[obstacles.length-1];
     if (last.x + last.w + gap > GAME_W) return;
   }
-  const types = stage<=3?['cactusShort']:stage<=5?['cactusShort','cactusTall']:stage<=7?['cactusTall','cactusShort','cactusShort']:['cactusTall','cactusShort','rock'];
-  const t = types[Math.floor(Math.random()*types.length)];
-  const widths = {cactusTall:48, cactusShort:42, rock:54};
+
+  // Force TREE as the final obstacle of each stage
+  let t;
+  if (obstaclesSpawned >= OBS_CLEAR - 1) {
+    t = 'tree';
+  } else {
+    const types = stage<=3?['cactusShort']:stage<=5?['cactusShort','cactusTall']:stage<=7?['cactusTall','cactusShort','cactusShort']:['cactusTall','cactusShort','rock'];
+    t = types[Math.floor(Math.random()*types.length)];
+  }
+  const widths = {cactusTall:48, cactusShort:42, rock:54, tree:60};
   obstacles.push({x:GAME_W, type:t, w:widths[t], passed:false});
+  obstaclesSpawned++;
   const delay = stage<=3 ? 25+Math.floor(Math.random()*15) : stage<=6 ? 18+Math.floor(Math.random()*12) : 12+Math.floor(Math.random()*10);
   obstacleTimer = delay;
 }
@@ -334,7 +381,8 @@ function checkCollision() {
     let oB;
     if (o.type==='cactusTall')   oB = {x:o.x+10, y:GROUND_Y-42, w:10, h:42};
     else if (o.type==='cactusShort') oB = {x:o.x+9, y:GROUND_Y-24, w:10, h:24};
-    else oB = {x:o.x+16, y:GROUND_Y-24, w:14, h:24};
+    else if (o.type==='rock')    oB = {x:o.x+16, y:GROUND_Y-24, w:14, h:24};
+    else /* tree */              oB = {x:o.x+14, y:GROUND_Y-42, w:10, h:42};
     if (dB.x<oB.x+oB.w && dB.x+dB.w>oB.x && dB.y<oB.y+oB.h && dB.y+dB.h>oB.y) return true;
   }
   return false;
@@ -409,11 +457,23 @@ function update() {
     gameState = 'stageClear';
     if (stage < 10) stage++;
     stageFlash = 30;
+    // Celebration confetti burst!
+    const colors = ['#ffd700','#ff6b6b','#51cf66','#339af0','#ff922b','#f06595','#20c997','#cc5de8'];
+    for (let i=0;i<60;i++) {
+      confetti.push({
+        x: GAME_W/2, y: GAME_H/2,
+        vx: (Math.random()-0.5)*10, vy: -3-Math.random()*8,
+        life: 40+Math.random()*40, maxLife: 80,
+        size: 3+Math.floor(Math.random()*5),
+        color: colors[Math.floor(Math.random()*colors.length)]
+      });
+    }
   }
 
   // update particles
   particles = particles.filter(p => { p.x += p.vx; p.y += p.vy; p.life--; return p.life > 0; });
   popups = popups.filter(pu => { pu.y -= 0.7; pu.life--; return pu.life > 0; });
+  confetti = confetti.filter(c => { c.x += c.vx; c.y += c.vy; c.vy += 0.15; c.life--; return c.life > 0; });
 
   document.getElementById('score').textContent = String(score).padStart(5,'0');
   document.getElementById('hi').textContent = String(hiScore).padStart(5,'0');
@@ -425,6 +485,13 @@ function draw() {
   if (shakeFrames > 0) ctx.translate(shakeX, shakeY);
   drawScene();
   ctx.restore();
+  // Confetti renders on top of overlay
+  if (gameState === 'stageClear') {
+    for (let c of confetti) {
+      ctx.fillStyle = c.color;
+      ctx.fillRect(c.x, c.y, c.size, c.size);
+    }
+  }
   if (gameState !== 'playing') drawOverlay();
 }
 
@@ -433,7 +500,7 @@ function loop() { update(); draw(); requestAnimationFrame(loop); }
 // ─── RESET ───
 function resetGame(full) {
   if (full) { stage = 1; score = 0; }
-  obstaclesPassed = 0; obstacles = []; particles = []; popups = []; speedLines = [];
+  obstaclesPassed = 0; obstaclesSpawned = 0; obstacles = []; particles = []; popups = []; confetti = []; speedLines = [];
   obstacleTimer = 40; shakeFrames = 0; stageFlash = 0;
   dino.y = GROUND_Y; dino.vy = 0; dino.jumping = false; jumpsUsed = 0;
   document.getElementById('score').textContent = '00000';
