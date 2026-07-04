@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>DINO RUNNER v15</title>
+<title>DINO RUNNER v16</title>
 <style>
   * { margin:0; padding:0; box-sizing:border-box; }
   html, body {
@@ -78,7 +78,7 @@
   <div>HI <span id="hi">00000</span></div>
   <div><span id="score">00000</span></div>
   <div>STAGE <span id="stg">1</span></div>
-  <div style="font-size:8px;color:#ccc;margin-top:2px;">v15</div>
+  <div style="font-size:8px;color:#ccc;margin-top:2px;">v16</div>
 </div>
 <div id="selBtns">
   <button class="selBtn" id="btnPrev">◀</button>
@@ -291,7 +291,7 @@ function drawOverlay(){
     if(gameMode==='daily'){ctx.fillStyle='#ff922b';ctx.font='bold 13px "Courier New"';ctx.fillText('🔥 DAILY CHALLENGE',GAME_W/2,GROUND_Y-35);ctx.fillStyle='#999';ctx.font='11px "Courier New"';ctx.fillText(`TODAY BEST: ${dailyBest}`,GAME_W/2,GROUND_Y-22);}
   } else if(gameState==='stageClear'){
     if(stage>=11){ctx.fillStyle='rgba(0,0,0,0.75)';ctx.fillRect(0,0,GAME_W,GAME_H);ctx.fillStyle='#ffd700';ctx.font='bold 30px "Courier New"';ctx.fillText('🎉 ALL CLEAR! 🎉',GAME_W/2,GAME_H/2-35);ctx.fillStyle='#fff';ctx.font='15px "Courier New"';ctx.fillText('모든 스테이지를 클리어했습니다!',GAME_W/2,GAME_H/2);ctx.font='13px "Courier New"';ctx.fillText(`FINAL SCORE: ${score}`,GAME_W/2,GAME_H/2+25);ctx.fillStyle='#ccc';ctx.font='12px "Courier New"';ctx.fillText('🦖 🦏 🦅 🦇 THANK YOU FOR PLAYING!',GAME_W/2,GAME_H/2+50);ctx.font='11px "Courier New"';ctx.fillText('TAP TO PLAY AGAIN',GAME_W/2,GAME_H/2+72);}
-    else{ctx.fillStyle='rgba(255,255,255,0.82)';ctx.fillRect(0,0,GAME_W,GAME_H);ctx.fillStyle='#ffd700';ctx.fillRect(GAME_W/2-160,GAME_H/2-42,320,84);ctx.fillStyle='#b8960f';ctx.fillRect(GAME_W/2-160,GAME_H/2-42,320,4);ctx.fillRect(GAME_W/2-160,GAME_H/2+38,320,4);ctx.fillStyle='#fff';ctx.font='bold 22px "Courier New"';ctx.fillText(`🏆 STAGE ${stage-1} CLEAR!`,GAME_W/2,GAME_H/2-12);ctx.fillStyle='#f5f0d0';ctx.font='13px "Courier New"';ctx.fillText(`NEXT: ${STAGE_NAMES[Math.min(stage-1,9)]}`,GAME_W/2,GAME_H/2+14);ctx.fillStyle='#fff';ctx.font='11px "Courier New"';ctx.fillText('TAP TO CONTINUE',GAME_W/2,GAME_H/2+32);}
+    else{ctx.fillStyle='rgba(0,0,0,0.78)';ctx.fillRect(0,0,GAME_W,GAME_H);ctx.fillStyle='#2a1800';ctx.fillRect(GAME_W/2-165,GAME_H/2-48,330,96);ctx.fillStyle='#ffd700';ctx.fillRect(GAME_W/2-160,GAME_H/2-43,320,86);ctx.fillStyle='#2a1800';ctx.font='bold 23px "Courier New"';ctx.fillText(`🏆 STAGE ${stage-1} CLEAR!`,GAME_W/2,GAME_H/2-15);ctx.fillStyle='#5a3800';ctx.font='bold 14px "Courier New"';ctx.fillText(`NEXT: ${STAGE_NAMES[Math.min(stage-1,9)]}`,GAME_W/2,GAME_H/2+16);ctx.fillStyle='#3d2500';ctx.font='bold 11px "Courier New"';ctx.fillText('TAP TO CONTINUE',GAME_W/2,GAME_H/2+34);}
   } else if(gameState==='gameOver'){
     ctx.fillStyle='rgba(40,40,40,0.88)';ctx.fillRect(0,0,GAME_W,GAME_H);ctx.fillStyle='#ff4444';ctx.font='bold 24px "Courier New"';ctx.fillText('G A M E  O V E R',GAME_W/2,GAME_H/2-25);ctx.fillStyle='#ccc';ctx.font='13px "Courier New"';ctx.fillText(`SCORE: ${score}  |  HI: ${hiScore}`,GAME_W/2,GAME_H/2+5);if(gameMode==='daily'){ctx.fillStyle='#ff922b';ctx.font='12px "Courier New"';ctx.fillText(`🔥 TODAY BEST: ${dailyBest}`,GAME_W/2,GAME_H/2+24);}ctx.font='12px "Courier New"';ctx.fillText('TAP TO RESTART',GAME_W/2,GAME_H/2+44);
   }
