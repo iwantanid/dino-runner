@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>DINO RUNNER v23</title>
+<title>DINO RUNNER v24</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}html,body{width:100%;height:100%;overflow:hidden;background:#fff;touch-action:manipulation;-webkit-tap-highlight-color:transparent;-webkit-user-select:none;user-select:none;font-family:'Courier New',monospace;position:fixed;top:0;left:0}canvas{display:block;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);image-rendering:crisp-edges;image-rendering:pixelated;background:#f0f4f8}#ui{position:absolute;top:0;right:0;padding:6px 10px;font-size:11px;color:#888;text-align:right;pointer-events:none;letter-spacing:1px;z-index:10}#ui div{line-height:1.5}#ui span{color:#535353;font-weight:bold}#pauseBtn{position:absolute;top:6px;left:8px;z-index:40;display:none;font-size:20px;background:rgba(0,0,0,.3);color:#fff;border:none;border-radius:8px;width:36px;height:36px;cursor:pointer;line-height:1;-webkit-tap-highlight-color:transparent}#pauseBtn.show{display:block}#pauseBtn:active{background:rgba(0,0,0,.5)}#selBtns{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:20;display:none;flex-direction:row;align-items:center;justify-content:space-between}#selBtns.show{display:flex}.selBtn{pointer-events:auto;width:18%;height:60%;min-width:44px;display:flex;align-items:center;justify-content:center;font-size:clamp(24px,6vw,48px);color:#bbb;background:transparent;border:none;cursor:pointer;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none;font-family:'Courier New',monospace}.selBtn:active{color:#535353}#selInfo{position:absolute;bottom:8%;left:50%;transform:translateX(-50%);text-align:center;pointer-events:none;z-index:21;display:none;color:#999;font-family:'Courier New',monospace;font-size:clamp(9px,1.8vw,12px);letter-spacing:1px}#selInfo.show{display:block}#modeBtn{position:absolute;bottom:2%;left:50%;transform:translateX(-50%);z-index:25;display:none;font-family:'Courier New',monospace;font-size:clamp(10px,2vw,12px);color:#aaa;background:transparent;border:1px solid #ddd;border-radius:6px;padding:5px 14px;cursor:pointer;letter-spacing:1px;-webkit-tap-highlight-color:transparent}#modeBtn.show{display:block}#comboUI{position:absolute;top:22%;left:50%;transform:translateX(-50%);z-index:15;pointer-events:none;display:none;font-family:'Courier New',monospace;font-size:clamp(14px,3vw,24px);color:#ffd700;font-weight:bold;text-shadow:0 0 8px rgba(255,215,0,0.5);letter-spacing:2px}#buyOverlay{position:absolute;bottom:12%;left:50%;transform:translateX(-50%);z-index:30;display:none;text-align:center}#buyOverlay.show{display:block}#buyBtn{font-family:'Courier New',monospace;font-size:clamp(11px,2vw,14px);background:#ffd700;color:#2a1800;border:none;border-radius:8px;padding:8px 20px;cursor:pointer;font-weight:bold;letter-spacing:1px;-webkit-tap-highlight-color:transparent}#buyBtn:active{background:#c8960f}#lockedLabel{color:#888;font-size:clamp(10px,2vw,12px);margin-bottom:4px}#perkLabel{color:#c8960f;font-size:clamp(9px,1.8vw,11px);margin-top:2px}
 #gameOverBtns{position:absolute;bottom:10%;left:50%;transform:translateX(-50%);z-index:35;display:none;gap:16px}#gameOverBtns.show{display:flex;flex-wrap:wrap;justify-content:center}.goBtn{font-family:'Courier New',monospace;font-size:clamp(12px,2.5vw,15px);padding:12px 20px;border-radius:10px;cursor:pointer;font-weight:bold;letter-spacing:1px;-webkit-tap-highlight-color:transparent;border:none;white-space:nowrap}#btnContinue{background:#ffd700;color:#2a1800}#btnContinue:active{background:#c8960f}#btnContinue.disabled{background:#666;color:#999;pointer-events:none}#btnRestart{background:#535353;color:#ddd}#btnRestart:active{background:#3c3c3c}
@@ -14,7 +14,7 @@
 <body>
 <canvas id="game"></canvas>
 <div id="ui">
-<div>최고 <span id="hi">00000</span></div><div><span id="score">00000</span></div><div>🪙 <span id="goldDisplay">0</span></div><div>스테이지 <span id="stg">1</span>/30</div><div style="font-size:8px;color:#ccc;margin-top:2px">v23</div>
+<div>최고 <span id="hi">00000</span></div><div><span id="score">00000</span></div><div>🪙 <span id="goldDisplay">0</span></div><div>스테이지 <span id="stg">1</span>/30</div><div style="font-size:8px;color:#ccc;margin-top:2px">v24</div>
 </div>
 <button id="pauseBtn">⏸</button>
 <div id="selBtns"><button class="selBtn" id="btnPrev">◀</button><div style="flex:1"></div><button class="selBtn" id="btnNext">▶</button></div>
@@ -23,7 +23,7 @@
 <div id="gameOverBtns"><button class="goBtn" id="btnContinue">🪙 이어하기</button><button class="goBtn" id="btnRestart">🔄 처음부터</button></div>
 
 <script>
-const canvas=document.getElementById('game'),ctx=canvas.getContext('2d');
+const canvas=document.getElementById('game'),ctx=canvas.getContext('2d');ctx.imageSmoothingEnabled=false;
 const selBtns=document.getElementById('selBtns'),selInfo=document.getElementById('selInfo');
 const btnPrev=document.getElementById('btnPrev'),btnNext=document.getElementById('btnNext');
 const modeBtn=document.getElementById('modeBtn'),comboUI=document.getElementById('comboUI');
@@ -120,7 +120,7 @@ let shieldActive=false,wasJumping=false,jumpBuffer=0,coyoteTime=0;
 
 // ─── RESIZE ───
 const GAME_W=900,GAME_H=300;
-function resize(){const vw=window.innerWidth,vh=window.innerHeight;let w,h;if(vw/vh>GAME_W/GAME_H){h=vh*.88;w=h*(GAME_W/GAME_H)}else{w=vw*.96;h=w*(GAME_H/GAME_W)}if(w<320){w=320;h=w*(GAME_H/GAME_W)}canvas.style.width=w+'px';canvas.style.height=h+'px';canvas.width=GAME_W;canvas.height=GAME_H}
+function resize(){const vw=window.innerWidth,vh=window.innerHeight;let w,h;if(vw/vh>GAME_W/GAME_H){h=vh*.88;w=h*(GAME_W/GAME_H)}else{w=vw*.96;h=w*(GAME_H/GAME_W)}if(w<320){w=320;h=w*(GAME_H/GAME_W)}canvas.style.width=w+'px';canvas.style.height=h+'px';canvas.width=GAME_W;canvas.height=GAME_H;ctx.imageSmoothingEnabled=false}
 window.addEventListener('resize',resize);window.addEventListener('orientationchange',()=>setTimeout(resize,100));resize();
 
 // ─── CONSTANTS ───
@@ -147,9 +147,9 @@ const dino={x:DINO_X,y:GROUND_Y,vy:0,jumping:false,jumpPower:-7,gravity:.45,jump
 
 // ─── PERK HELPERS ───
 function getPerk(){return DINO_PERK_KEYS[dinoType];}
-function getJumpPower(){return getPerk()==='brachio'?-9:-7;}
+function getJumpPower(){return getPerk()==='brachio'?-10:-8.2;}
 function getJumpBoost(){return getPerk()==='brachio'?20:15;}
-function getGravity(){return getPerk()==='spino'?.36:.45;}
+function getGravity(){return getPerk()==='spino'?.46:.58;}
 function getGoldMult(){return getPerk()==='dilopho'?2:1;}
 function canDoubleJump(){return getPerk()==='mosa'?true:stage>=3;}
 function getHitbox(){if(getPerk()==='compso')return{x:dino.x+21,y:dino.y-24,w:10,h:20};return{x:dino.x+18,y:dino.y-32,w:16,h:28};}
@@ -285,7 +285,7 @@ function destroyNearestObstacle(){
 }
 function spawnObs(){obstacleTimer--;if(obstacleTimer>0)return;const gap=getGap();if(obstacles.length>0){const l=obstacles[obstacles.length-1];if(l.x+l.w+gap>GAME_W)return}let t;if(obstaclesSpawned>=OBS-1){t='tree'}else{t=STAGE_OBSTACLES[Math.min(stage-1,29)][Math.floor(srand()*STAGE_OBSTACLES[Math.min(stage-1,29)].length)]}const w={cactusTall:48,cactusShort:42,rock:54,tree:60};obstacles.push({x:GAME_W,type:t,w:w[t],passed:false});obstaclesSpawned++;obstacleTimer=stage<=3?28+Math.floor(srand()*18):stage<=6?20+Math.floor(srand()*14):stage<=10?14+Math.floor(srand()*10):stage<=20?8+Math.floor(srand()*8):5+Math.floor(srand()*6)}
 function chkCol(){const dB=getHitbox();for(let o of obstacles){let oB;if(o.type==='cactusTall')oB={x:o.x+10,y:GROUND_Y-42,w:10,h:42};else if(o.type==='cactusShort')oB={x:o.x+9,y:GROUND_Y-24,w:10,h:24};else if(o.type==='rock')oB={x:o.x+16,y:GROUND_Y-24,w:14,h:24};else oB={x:o.x+14,y:GROUND_Y-42,w:10,h:42};if(dB.x<oB.x+oB.w&&dB.x+dB.w>oB.x&&dB.y<oB.y+oB.h&&dB.y+dB.h>oB.y)return true}return false}
-function sp(x,y,c){for(let i=0;i<c;i++)particles.push({x,y,vx:(Math.random()-.5)*4,vy:-2-Math.random()*4,life:15+Math.random()*20,maxLife:35,size:2+Math.floor(Math.random()*4)})}
+function sp(x,y,c){const room=45-particles.length;if(room<=0)return;c=Math.min(c,room);for(let i=0;i<c;i++)particles.push({x,y,vx:(Math.random()-.5)*4,vy:-2-Math.random()*4,life:15+Math.random()*20,maxLife:35,size:2+Math.floor(Math.random()*4)})}
 function ap(x,y,t){popups.push({x,y,text:t,life:30,maxLife:30})}
 
 // ─── UPDATE ───
@@ -311,7 +311,7 @@ function update(){if(inputLockTimer>0)inputLockTimer--;if(landingSquish>0)landin
   }
   for(let i=particles.length-1;i>=0;i--){particles[i].x+=particles[i].vx;particles[i].y+=particles[i].vy;if(--particles[i].life<=0)particles.splice(i,1)}for(let i=popups.length-1;i>=0;i--){popups[i].y-=.7;if(--popups[i].life<=0)popups.splice(i,1)}for(let i=confetti.length-1;i>=0;i--){confetti[i].x+=confetti[i].vx;confetti[i].y+=confetti[i].vy;confetti[i].vy+=.15;if(--confetti[i].life<=0)confetti.splice(i,1)}for(let i=starParticles.length-1;i>=0;i--){starParticles[i].x+=starParticles[i].vx;starParticles[i].y+=starParticles[i].vy;starParticles[i].vy+=.1;starParticles[i].rot+=.15;if(--starParticles[i].life<=0)starParticles.splice(i,1)}scoreEl.textContent=String(score).padStart(5,'0');hiEl.textContent=String(hiScore).padStart(5,'0');stgEl.textContent=Math.min(stage,30);goldDisplay.textContent=gold;flushGold()}
 function draw(){if(shakeFrames>0)ctx.setTransform(1,0,0,1,shakeX,shakeY);drawScene();ctx.setTransform(1,0,0,1,0,0);if(gameState!=='playing'&&gameState!=='paused')drawOverlay();if(gameState==='paused')drawOverlay();if(gameState==='stageClear'){for(let c of confetti){ctx.fillStyle=c.color;ctx.fillRect(c.x,c.y,c.size,c.size)}}for(let s of starParticles){ctx.setTransform(1,0,0,1,s.x,s.y);ctx.rotate(s.rot);ctx.fillStyle='#ffd700';const sz=s.size;ctx.beginPath();for(let i=0;i<4;i++){const a=(i*Math.PI)/2;ctx.lineTo(Math.cos(a)*sz*2,Math.sin(a)*sz*2);ctx.lineTo(Math.cos(a+Math.PI/4)*sz,Math.sin(a+Math.PI/4)*sz)}ctx.fill()}ctx.setTransform(1,0,0,1,0,0)}
-function loop(){update();draw();requestAnimationFrame(loop)}
+const STEP=1000/60;let lastTs=0,acc=0;function loop(ts){if(ts===undefined)ts=performance.now();if(!lastTs)lastTs=ts;let dt=ts-lastTs;lastTs=ts;if(dt>50)dt=50;acc+=dt;let steps=0;while(acc>=STEP&&steps<3){update();acc-=STEP;steps++}if(steps===0)update();draw();requestAnimationFrame(loop)}
 
 // ─── RESET ───
 function resetGame(full){if(full){stage=1;score=0;goldEarnedThisRun=0;scoreMilestone=0;shieldActive=getPerk()==='stego'}obstaclesPassed=0;obstaclesSpawned=0;obstacles=[];particles=[];popups=[];confetti=[];speedLines=[];starParticles=[];obstacleTimer=40;shakeFrames=0;stageFlash=0;inputLockTimer=0;comboCount=0;comboMult=1;comboUI.style.display='none';dino.y=GROUND_Y;dino.vy=0;dino.jumping=false;wasJumping=false;jumpsUsed=0;dino.jumpHeld=false;dino.jumpBoostLeft=0;jumpBuffer=0;coyoteTime=0;dino.gravity=getGravity();if(gameMode==='daily'){const n=new Date();const seed=n.getFullYear()*10000+(n.getMonth()+1)*100+n.getDate();let s=seed;srng=function(){s=(s*16807+0)%2147483647;return(s-1)/2147483646};for(let i=0;i<obstaclesSpawned;i++)srng()}else{srng=null}scoreEl.textContent='00000';hiEl.textContent=String(hiScore).padStart(5,'0');stgEl.textContent=stage;goldDisplay.textContent=gold}
@@ -322,7 +322,7 @@ function jp(){if(inputLockTimer>0)return;if(gameState==='waiting'){if(!unlocked[
 function jr(){dino.jumpHeld=false}
 document.addEventListener('keydown',e=>{if(gameState==='waiting'){if(e.code==='ArrowLeft'){cycleDino(-1);return}if(e.code==='ArrowRight'){cycleDino(1);return}}if(e.code==='Space'||e.code==='ArrowUp'){e.preventDefault();jp()}});
 document.addEventListener('keyup',e=>{if(e.code==='Space'||e.code==='ArrowUp')jr()});
-canvas.addEventListener('touchstart',e=>{e.preventDefault();jp()});canvas.addEventListener('touchend',e=>{e.preventDefault();jr()});canvas.addEventListener('touchcancel',e=>{jr()});canvas.addEventListener('mousedown',e=>{e.preventDefault();jp()});canvas.addEventListener('mouseup',e=>{e.preventDefault();jr()});
+canvas.addEventListener('touchstart',e=>{e.preventDefault();jp()},{passive:false});canvas.addEventListener('touchend',e=>{e.preventDefault();jr()},{passive:false});canvas.addEventListener('touchcancel',e=>{jr()},{passive:false});canvas.addEventListener('mousedown',e=>{e.preventDefault();jp()});canvas.addEventListener('mouseup',e=>{e.preventDefault();jr()});
 document.addEventListener('gesturestart',e=>e.preventDefault());document.addEventListener('gesturechange',e=>e.preventDefault());document.addEventListener('gestureend',e=>e.preventDefault());
 goldDisplay.textContent=gold;updateSelInfo();if(!unlocked[dinoType])updateBuyUI();resetGame(true);showUI();loop();
 </script>
