@@ -8,16 +8,18 @@
 <title>DINO RUNNER v20</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}html,body{width:100%;height:100%;overflow:hidden;background:#fff;touch-action:manipulation;-webkit-tap-highlight-color:transparent;-webkit-user-select:none;user-select:none;font-family:'Courier New',monospace;position:fixed;top:0;left:0}canvas{display:block;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);image-rendering:crisp-edges;image-rendering:pixelated;background:#f0f4f8}#ui{position:absolute;top:0;right:0;padding:6px 10px;font-size:11px;color:#888;text-align:right;pointer-events:none;letter-spacing:1px}#ui div{line-height:1.5}#ui span{color:#535353;font-weight:bold}#selBtns{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:20;display:none;flex-direction:row;align-items:center;justify-content:space-between}#selBtns.show{display:flex}.selBtn{pointer-events:auto;width:18%;height:60%;min-width:44px;display:flex;align-items:center;justify-content:center;font-size:clamp(24px,6vw,48px);color:#bbb;background:transparent;border:none;cursor:pointer;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none;font-family:'Courier New',monospace}.selBtn:active{color:#535353}#selInfo{position:absolute;bottom:8%;left:50%;transform:translateX(-50%);text-align:center;pointer-events:none;z-index:21;display:none;color:#999;font-family:'Courier New',monospace;font-size:clamp(9px,1.8vw,12px);letter-spacing:1px}#selInfo.show{display:block}#modeBtn{position:absolute;bottom:2%;left:50%;transform:translateX(-50%);z-index:25;display:none;font-family:'Courier New',monospace;font-size:clamp(10px,2vw,12px);color:#aaa;background:transparent;border:1px solid #ddd;border-radius:6px;padding:5px 14px;cursor:pointer;letter-spacing:1px;-webkit-tap-highlight-color:transparent}#modeBtn.show{display:block}#comboUI{position:absolute;top:22%;left:50%;transform:translateX(-50%);z-index:15;pointer-events:none;display:none;font-family:'Courier New',monospace;font-size:clamp(14px,3vw,24px);color:#ffd700;font-weight:bold;text-shadow:0 0 8px rgba(255,215,0,0.5);letter-spacing:2px}#buyOverlay{position:absolute;bottom:12%;left:50%;transform:translateX(-50%);z-index:30;display:none;text-align:center}#buyOverlay.show{display:block}#buyBtn{font-family:'Courier New',monospace;font-size:clamp(11px,2vw,14px);background:#ffd700;color:#2a1800;border:none;border-radius:8px;padding:8px 20px;cursor:pointer;font-weight:bold;letter-spacing:1px;-webkit-tap-highlight-color:transparent}#buyBtn:active{background:#c8960f}#lockedLabel{color:#888;font-size:clamp(10px,2vw,12px);margin-bottom:4px}#perkLabel{color:#c8960f;font-size:clamp(9px,1.8vw,11px);margin-top:2px}
+#gameOverBtns{position:absolute;bottom:10%;left:50%;transform:translateX(-50%);z-index:35;display:none;gap:16px}#gameOverBtns.show{display:flex;flex-wrap:wrap;justify-content:center}.goBtn{font-family:'Courier New',monospace;font-size:clamp(12px,2.5vw,15px);padding:12px 20px;border-radius:10px;cursor:pointer;font-weight:bold;letter-spacing:1px;-webkit-tap-highlight-color:transparent;border:none;white-space:nowrap}#btnContinue{background:#ffd700;color:#2a1800}#btnContinue:active{background:#c8960f}#btnContinue.disabled{background:#666;color:#999;pointer-events:none}#btnRestart{background:#535353;color:#ddd}#btnRestart:active{background:#3c3c3c}
 </style>
 </head>
 <body>
 <canvas id="game"></canvas>
 <div id="ui">
-<div>HI <span id="hi">00000</span></div><div><span id="score">00000</span></div><div>🪙 <span id="goldDisplay">0</span></div><div>STAGE <span id="stg">1</span>/30</div><div style="font-size:8px;color:#ccc;margin-top:2px">v20</div>
+<div>최고 <span id="hi">00000</span></div><div><span id="score">00000</span></div><div>🪙 <span id="goldDisplay">0</span></div><div>스테이지 <span id="stg">1</span>/30</div><div style="font-size:8px;color:#ccc;margin-top:2px">v20</div>
 </div>
 <div id="selBtns"><button class="selBtn" id="btnPrev">◀</button><div style="flex:1"></div><button class="selBtn" id="btnNext">▶</button></div>
-<div id="selInfo"></div><button id="modeBtn">MODE: CLASSIC</button><div id="comboUI"></div>
-<div id="buyOverlay"><div id="lockedLabel">🔒 LOCKED</div><div id="perkLabel"></div><button id="buyBtn">🪙 UNLOCK</button></div>
+<div id="selInfo"></div><button id="modeBtn">모드: 클래식</button><div id="comboUI"></div>
+<div id="buyOverlay"><div id="lockedLabel">🔒 잠김</div><div id="perkLabel"></div><button id="buyBtn">🪙 구매</button></div>
+<div id="gameOverBtns"><button class="goBtn" id="btnContinue">🪙 이어하기</button><button class="goBtn" id="btnRestart">🔄 처음부터</button></div>
 
 <script>
 const canvas=document.getElementById('game'),ctx=canvas.getContext('2d');
@@ -27,6 +29,8 @@ const modeBtn=document.getElementById('modeBtn'),comboUI=document.getElementById
 const buyOverlay=document.getElementById('buyOverlay'),buyBtn=document.getElementById('buyBtn');
 const lockedLabel=document.getElementById('lockedLabel'),goldDisplay=document.getElementById('goldDisplay');
 const perkLabel=document.getElementById('perkLabel');
+const gameOverBtns=document.getElementById('gameOverBtns');
+const btnContinue=document.getElementById('btnContinue'),btnRestart=document.getElementById('btnRestart');
 
 // ─── GOLD & UNLOCK ───
 let gold=parseInt(localStorage.getItem('dinoGold')||'0');
@@ -51,75 +55,40 @@ function saveUnlock(){localStorage.setItem('dinoUnlocked',JSON.stringify(unlocke
 
 // ─── EPISODES ───
 const EPISODES=[
-  {title:'험난한 협곡을 넘어서',lines:[
-    '험난한 협곡을 무사히 건넜다!',
-    '우리의 공룡은 더 이상 초보가 아니다.',
-    '날카로운 바위와 깊은 골짜기 속에서도',
-    '포기하지 않고 달려온 용기.',
-    '',
-    '앞길은 더 험하지만,',
-    '발걸음은 더 가볍다.',
-  ]},
-  {title:'신들의 땅에 서다',lines:[
-    '신들의 땅에 발을 디뎠다!',
-    '전설의 영역에 도달한 용사여.',
-    '하지만 이것이 끝이 아니다.',
-    '진짜 모험은 지금부터 시작된다.',
-    '',
-    '더 높이, 더 멀리,',
-    '끝없는 지평선을 향해!',
-  ]},
-  {title:'하늘을 달리는 공룡',lines:[
-    '구름 위 하늘 섬을 정복했다!',
-    '날개 없는 공룡이 하늘을 달리다니,',
-    '기적 같은 일이다.',
-    '바람을 가르며 솟아오른 순간들.',
-    '',
-    '하늘조차 우리의 길이다.',
-    '더 높은 곳으로!',
-  ]},
-  {title:'시공간을 넘어서',lines:[
-    '시공간의 균열을 넘어섰다!',
-    '과거와 미래가 공존하는 차원을',
-    '두려움 없이 달린 용자.',
-    '시간조차 우릴 막을 수 없다.',
-    '',
-    '차원의 벽을 허물고,',
-    '새로운 세상으로!',
-  ]},
-  {title:'신비의 숲을 지나',lines:[
-    '거대한 버섯 숲을 지나왔다!',
-    '형형색색 포자들 사이를 누비며',
-    '우리의 공룡은 더욱 강해졌다.',
-    '독과 환영도 우릴 막지 못해.',
-    '',
-    '마지막 관문이 눈앞이다.',
-    '조금만 더 힘을 내자!',
-  ]},
-  {title:'전설의 탄생',lines:[
-    '창조의 신전에 도착했다!',
-    '모든 시련을 이겨내고',
-    '마침내 전설이 되었다.',
-    '30개의 세상을 달린 위대한 모험가.',
-    '',
-    '기억하라, 이 순간을.',
-    '당신은 진정한 영웅이다!',
-  ]},
+  {title:'험난한 협곡을 넘어서',lines:['험난한 협곡을 무사히 건넜다!','우리의 공룡은 더 이상 초보가 아니다.','날카로운 바위와 깊은 골짜기 속에서도','포기하지 않고 달려온 용기.','','앞길은 더 험하지만,','발걸음은 더 가볍다.']},
+  {title:'신들의 땅에 서다',lines:['신들의 땅에 발을 디뎠다!','전설의 영역에 도달한 용사여.','하지만 이것이 끝이 아니다.','진짜 모험은 지금부터 시작된다.','','더 높이, 더 멀리,','끝없는 지평선을 향해!']},
+  {title:'하늘을 달리는 공룡',lines:['구름 위 하늘 섬을 정복했다!','날개 없는 공룡이 하늘을 달리다니,','기적 같은 일이다.','바람을 가르며 솟아오른 순간들.','','하늘조차 우리의 길이다.','더 높은 곳으로!']},
+  {title:'시공간을 넘어서',lines:['시공간의 균열을 넘어섰다!','과거와 미래가 공존하는 차원을','두려움 없이 달린 용자.','시간조차 우릴 막을 수 없다.','','차원의 벽을 허물고,','새로운 세상으로!']},
+  {title:'신비의 숲을 지나',lines:['거대한 버섯 숲을 지나왔다!','형형색색 포자들 사이를 누비며','우리의 공룡은 더욱 강해졌다.','독과 환영도 우릴 막지 못해.','','마지막 관문이 눈앞이다.','조금만 더 힘을 내자!']},
+  {title:'전설의 탄생',lines:['창조의 신전에 도착했다!','모든 시련을 이겨내고','마침내 전설이 되었다.','30개의 세상을 달린 위대한 모험가.','','기억하라, 이 순간을.','당신은 진정한 영웅이다!']},
 ];
 
 // ─── SELECTION UI ───
 function showUI(){selBtns.classList.add('show');selInfo.classList.add('show');modeBtn.classList.add('show');updateSelInfo();updateBuyUI();}
-function hideUI(){selBtns.classList.remove('show');selInfo.classList.remove('show');modeBtn.classList.remove('show');comboUI.style.display='none';buyOverlay.classList.remove('show');}
-function updateSelInfo(){let t='◀ ▶ 변경 · 중앙 TAP 시작 · '+DINO_SHORT[dinoType];if(DINO_PRICES[dinoType]>0&&!unlocked[dinoType])t='🔒 '+DINO_NAMES[dinoType]+' — '+DINO_PRICES[dinoType]+'🪙 필요';selInfo.textContent=t;}
-function updateBuyUI(){if(!unlocked[dinoType]&&gameState==='waiting'){buyOverlay.classList.add('show');lockedLabel.textContent='🔒 '+DINO_NAMES[dinoType];perkLabel.textContent=DINO_PERKS[dinoType]||'';buyBtn.textContent='🪙 '+DINO_PRICES[dinoType]+' GOLD';buyBtn.style.opacity=gold>=DINO_PRICES[dinoType]?'1':'0.5';}else{buyOverlay.classList.remove('show');}}
+function hideUI(){selBtns.classList.remove('show');selInfo.classList.remove('show');modeBtn.classList.remove('show');comboUI.style.display='none';buyOverlay.classList.remove('show');gameOverBtns.classList.remove('show');}
+function updateSelInfo(){let t='◀ ▶ 변경 · 중앙 탭 시작 · '+DINO_SHORT[dinoType];if(DINO_PRICES[dinoType]>0&&!unlocked[dinoType])t='🔒 '+DINO_NAMES[dinoType]+' — '+DINO_PRICES[dinoType]+'🪙 필요';selInfo.textContent=t;}
+function updateBuyUI(){if(!unlocked[dinoType]&&gameState==='waiting'){buyOverlay.classList.add('show');lockedLabel.textContent='🔒 '+DINO_NAMES[dinoType];perkLabel.textContent=DINO_PERKS[dinoType]||'';buyBtn.textContent='🪙 '+DINO_PRICES[dinoType]+' 골드';buyBtn.style.opacity=gold>=DINO_PRICES[dinoType]?'1':'0.5';}else{buyOverlay.classList.remove('show');}}
 btnPrev.addEventListener('click',e=>{e.stopPropagation();cycleDino(-1);});
 btnNext.addEventListener('click',e=>{e.stopPropagation();cycleDino(1);});
 function cycleDino(dir){let nd=dinoType;for(let i=0;i<14;i++){nd=(nd+dir+14)%14;if(unlocked[nd]){dinoType=nd;break;}}localStorage.setItem('dinoType',dinoType);updateSelInfo();updateBuyUI();}
 buyBtn.addEventListener('click',e=>{e.stopPropagation();if(gold>=DINO_PRICES[dinoType]&&!unlocked[dinoType]){gold-=DINO_PRICES[dinoType];unlocked[dinoType]=true;saveGold();saveUnlock();updateSelInfo();buyOverlay.classList.remove('show');}});
 
+// ─── GAME OVER BUTTONS ───
+function showGameOverBtns(){
+  const cc=stage*20;
+  gameOverBtns.classList.add('show');
+  if(gold>=cc){btnContinue.textContent='🪙 이어하기 ('+cc+' 골드)';btnContinue.classList.remove('disabled');}
+  else{btnContinue.textContent='🪙 골드 부족 ('+cc+')';btnContinue.classList.add('disabled');}
+}
+btnContinue.addEventListener('click',e=>{e.stopPropagation();const cc=stage*20;if(gold>=cc&&gameState==='gameOver'){gold-=cc;saveGold();continueGame();}});
+btnRestart.addEventListener('click',e=>{e.stopPropagation();if(gameState==='gameOver'){resetGame(true);gameState='playing';gameOverBtns.classList.remove('show');}});
+function continueGame(){
+  gameState='playing';obstaclesPassed=0;obstaclesSpawned=0;obstacles=[];particles=[];popups=[];confetti=[];speedLines=[];starParticles=[];obstacleTimer=40;shakeFrames=0;stageFlash=0;inputLockTimer=45;comboCount=0;comboMult=1;comboUI.style.display='none';dino.y=GROUND_Y;dino.vy=0;dino.jumping=false;wasJumping=false;jumpsUsed=0;dino.jumpHeld=false;dino.jumpBoostLeft=0;goldEarnedThisRun=0;scoreMilestone=Math.floor(score/100);gameOverBtns.classList.remove('show');
+}
+
 // ─── MODE ───
 let gameMode='classic',dailyBest=parseInt(localStorage.getItem('dailyBest')||'0');
-modeBtn.addEventListener('click',e=>{e.stopPropagation();gameMode=gameMode==='classic'?'daily':'classic';modeBtn.textContent=gameMode==='daily'?'MODE: DAILY':'MODE: CLASSIC';});
+modeBtn.addEventListener('click',e=>{e.stopPropagation();gameMode=gameMode==='classic'?'daily':'classic';modeBtn.textContent=gameMode==='daily'?'모드: 데일리':'모드: 클래식';});
 
 // ─── SWIPE ───
 let swipeX=0;
@@ -246,26 +215,27 @@ function drawOverlay(){ctx.textAlign='center';
     ctx.fillStyle='#999';ctx.font='10px "Courier New"';ctx.fillText('안나 유빈 우진을 위해 아빠가 만들어준 두 번째 게임',GAME_W/2,GROUND_Y-78);
     ctx.fillStyle='#666';ctx.font='bold 16px "Courier New"';ctx.fillText(DINO_NAMES[dinoType],GAME_W/2,GROUND_Y-61);
     if(DINO_PERK_KEYS[dinoType]){ctx.fillStyle='#c8960f';ctx.font='10px "Courier New"';ctx.fillText('⭐ '+DINO_PERKS[dinoType],GAME_W/2,GROUND_Y-47)}
-    if(gameMode==='daily'){ctx.fillStyle='#ff922b';ctx.font='bold 13px "Courier New"';ctx.fillText('🔥 DAILY CHALLENGE',GAME_W/2,GROUND_Y-30);ctx.fillStyle='#999';ctx.font='11px "Courier New"';ctx.fillText(`TODAY BEST: ${dailyBest}`,GAME_W/2,GROUND_Y-18)}}
+    if(gameMode==='daily'){ctx.fillStyle='#ff922b';ctx.font='bold 13px "Courier New"';ctx.fillText('🔥 데일리 챌린지',GAME_W/2,GROUND_Y-30);ctx.fillStyle='#999';ctx.font='11px "Courier New"';ctx.fillText(`오늘의 최고: ${dailyBest}`,GAME_W/2,GROUND_Y-18)}}
   else if(gameState==='episode'){
     const ep=EPISODES[episodeIdx];
     ctx.fillStyle='rgba(0,0,0,0.88)';ctx.fillRect(0,0,GAME_W,GAME_H);
-    // Decorative border
     ctx.strokeStyle='#ffd700';ctx.lineWidth=3;ctx.strokeRect(GAME_W/2-320,GAME_H/2-110,640,220);
     ctx.fillStyle='rgba(20,10,0,0.9)';ctx.fillRect(GAME_W/2-318,GAME_H/2-108,636,216);
-    // Glow dots
     for(let i=0;i<20;i++){const dx=GAME_W/2-300+i*32,dy=GAME_H/2-100+Math.sin(frame*.05+i)*8;ctx.fillStyle='rgba(255,215,0,'+(.3+.2*Math.sin(frame*.1+i))+' )';ctx.beginPath();ctx.arc(dx,dy,2,0,Math.PI*2);ctx.fill()}
-    // Title
     ctx.fillStyle='#ffd700';ctx.font='bold 20px "Courier New"';ctx.fillText('━━ '+ep.title+' ━━',GAME_W/2,GAME_H/2-84);
-    // Lines
     ctx.fillStyle='#e0d8c0';ctx.font='13px "Courier New"';
     for(let i=0;i<ep.lines.length;i++){ctx.fillText(ep.lines[i],GAME_W/2,GAME_H/2-50+i*22)}
-    // Tap prompt
-    const ta=.6+.4*Math.sin(frame*.08);ctx.fillStyle=`rgba(255,215,0,${ta})`;ctx.font='bold 12px "Courier New"';ctx.fillText('TAP TO CONTINUE',GAME_W/2,GAME_H/2+90);
+    const ta=.6+.4*Math.sin(frame*.08);ctx.fillStyle=`rgba(255,215,0,${ta})`;ctx.font='bold 12px "Courier New"';ctx.fillText('탭해서 계속',GAME_W/2,GAME_H/2+90);
   }
-  else if(gameState==='stageClear'){if(stage>=31){ctx.fillStyle='rgba(0,0,0,0.75)';ctx.fillRect(0,0,GAME_W,GAME_H);ctx.fillStyle='#ffd700';ctx.font='bold 30px "Courier New"';ctx.fillText('🎉 ALL CLEAR! 🎉',GAME_W/2,GAME_H/2-35);ctx.fillStyle='#fff';ctx.font='15px "Courier New"';ctx.fillText('모든 스테이지를 클리어했습니다!',GAME_W/2,GAME_H/2);ctx.font='13px "Courier New"';ctx.fillText(`FINAL SCORE: ${score}  |  🪙 +${goldEarnedThisRun}`,GAME_W/2,GAME_H/2+25);ctx.fillStyle='#ccc';ctx.font='12px "Courier New"';ctx.fillText('THANK YOU FOR PLAYING!',GAME_W/2,GAME_H/2+50);ctx.font='11px "Courier New"';ctx.fillText('TAP TO PLAY AGAIN',GAME_W/2,GAME_H/2+72)}
-    else{ctx.fillStyle='rgba(0,0,0,0.78)';ctx.fillRect(0,0,GAME_W,GAME_H);ctx.fillStyle='#2a1800';ctx.fillRect(GAME_W/2-175,GAME_H/2-52,350,104);ctx.fillStyle='#ffd700';ctx.fillRect(GAME_W/2-170,GAME_H/2-47,340,94);ctx.fillStyle='#2a1800';ctx.font='bold 22px "Courier New"';ctx.fillText(`🏆 STAGE ${stage-1} CLEAR!`,GAME_W/2,GAME_H/2-20);ctx.fillStyle='#5a3800';ctx.font='bold 13px "Courier New"';ctx.fillText(`NEXT: ${STAGE_NAMES[Math.min(stage-1,29)]}`,GAME_W/2,GAME_H/2+8);ctx.fillStyle='#3d2500';ctx.font='bold 11px "Courier New"';ctx.fillText(`🪙 +${goldEarnedThisRun}  ·  TAP TO CONTINUE`,GAME_W/2,GAME_H/2+30)}}
-  else if(gameState==='gameOver'){ctx.fillStyle='rgba(40,40,40,0.88)';ctx.fillRect(0,0,GAME_W,GAME_H);ctx.fillStyle='#ff4444';ctx.font='bold 24px "Courier New"';ctx.fillText('G A M E  O V E R',GAME_W/2,GAME_H/2-40);ctx.fillStyle='#ccc';ctx.font='13px "Courier New"';ctx.fillText(`SCORE: ${score}  |  HI: ${hiScore}  |  🪙 +${goldEarnedThisRun}`,GAME_W/2,GAME_H/2-15);if(gameMode==='daily'){ctx.fillStyle='#ff922b';ctx.font='12px "Courier New"';ctx.fillText(`🔥 TODAY BEST: ${dailyBest}`,GAME_W/2,GAME_H/2+6)}const continueCost=stage*20;if(gold>=continueCost){ctx.fillStyle='#ffd700';ctx.font='bold 14px "Courier New"';ctx.fillText(`🪙 DOUBLE TAP — Continue Stage ${stage} (${continueCost} GOLD)`,GAME_W/2,GAME_H/2+28)}ctx.fillStyle='#aaa';ctx.font='12px "Courier New"';ctx.fillText('TAP TO RESTART',GAME_W/2,GAME_H/2+50)}
+  else if(gameState==='stageClear'){if(stage>=31){ctx.fillStyle='rgba(0,0,0,0.75)';ctx.fillRect(0,0,GAME_W,GAME_H);ctx.fillStyle='#ffd700';ctx.font='bold 30px "Courier New"';ctx.fillText('🎉 올 클리어! 🎉',GAME_W/2,GAME_H/2-35);ctx.fillStyle='#fff';ctx.font='15px "Courier New"';ctx.fillText('모든 스테이지를 클리어했습니다!',GAME_W/2,GAME_H/2);ctx.font='13px "Courier New"';ctx.fillText(`최종 점수: ${score}  |  🪙 +${goldEarnedThisRun}`,GAME_W/2,GAME_H/2+25);ctx.fillStyle='#ccc';ctx.font='12px "Courier New"';ctx.fillText('플레이해줘서 고마워!',GAME_W/2,GAME_H/2+50);ctx.font='11px "Courier New"';ctx.fillText('탭해서 다시 플레이',GAME_W/2,GAME_H/2+72)}
+    else{ctx.fillStyle='rgba(0,0,0,0.78)';ctx.fillRect(0,0,GAME_W,GAME_H);ctx.fillStyle='#2a1800';ctx.fillRect(GAME_W/2-175,GAME_H/2-52,350,104);ctx.fillStyle='#ffd700';ctx.fillRect(GAME_W/2-170,GAME_H/2-47,340,94);ctx.fillStyle='#2a1800';ctx.font='bold 22px "Courier New"';ctx.fillText(`🏆 스테이지 ${stage-1} 클리어!`,GAME_W/2,GAME_H/2-20);ctx.fillStyle='#5a3800';ctx.font='bold 13px "Courier New"';ctx.fillText(`다음: ${STAGE_NAMES[Math.min(stage-1,29)]}`,GAME_W/2,GAME_H/2+8);ctx.fillStyle='#3d2500';ctx.font='bold 11px "Courier New"';ctx.fillText(`🪙 +${goldEarnedThisRun}  ·  탭해서 계속`,GAME_W/2,GAME_H/2+30)}}
+  else if(gameState==='gameOver'){
+    ctx.fillStyle='rgba(40,40,40,0.88)';ctx.fillRect(0,0,GAME_W,GAME_H);
+    ctx.fillStyle='#ff4444';ctx.font='bold 24px "Courier New"';ctx.fillText('게 임  오 버',GAME_W/2,GAME_H/2-40);
+    ctx.fillStyle='#ccc';ctx.font='13px "Courier New"';ctx.fillText(`점수: ${score}  |  최고: ${hiScore}  |  🪙 +${goldEarnedThisRun}`,GAME_W/2,GAME_H/2-15);
+    if(gameMode==='daily'){ctx.fillStyle='#ff922b';ctx.font='12px "Courier New"';ctx.fillText(`🔥 오늘의 최고: ${dailyBest}`,GAME_W/2,GAME_H/2+6)}
+    ctx.fillStyle='#aaa';ctx.font='11px "Courier New"';ctx.fillText('아래 버튼을 선택하세요',GAME_W/2,GAME_H/2+28);
+  }
   ctx.textAlign='start'}
 
 // ─── STAGE CONFIG ───
@@ -274,7 +244,7 @@ function getGap(){const g=[[180,280],[170,260],[150,240],[130,210],[110,190],[95
 function destroyNearestObstacle(){
   let nearest=null,minDist=250;
   for(let o of obstacles){if(!o.passed&&o.x>DINO_X&&o.x-DINO_X<minDist){minDist=o.x-DINO_X;nearest=o}}
-  if(nearest){obstacles=obstacles.filter(o=>o!==nearest);sp(nearest.x+nearest.w/2,GROUND_Y-30,12);ap(nearest.x+nearest.w/2,GROUND_Y-40,'💥 DESTROYED!')}
+  if(nearest){obstacles=obstacles.filter(o=>o!==nearest);sp(nearest.x+nearest.w/2,GROUND_Y-30,12);ap(nearest.x+nearest.w/2,GROUND_Y-40,'💥 파괴!')}
 }
 function spawnObs(){obstacleTimer--;if(obstacleTimer>0)return;const gap=getGap();if(obstacles.length>0){const l=obstacles[obstacles.length-1];if(l.x+l.w+gap>GAME_W)return}let t;if(obstaclesSpawned>=OBS-1){t='tree'}else{t=STAGE_OBSTACLES[Math.min(stage-1,29)][Math.floor(srand()*STAGE_OBSTACLES[Math.min(stage-1,29)].length)]}const w={cactusTall:48,cactusShort:42,rock:54,tree:60};obstacles.push({x:GAME_W,type:t,w:w[t],passed:false});obstaclesSpawned++;obstacleTimer=stage<=3?25+Math.floor(srand()*15):stage<=6?18+Math.floor(srand()*12):12+Math.floor(srand()*10)}
 function chkCol(){const dB=getHitbox();for(let o of obstacles){let oB;if(o.type==='cactusTall')oB={x:o.x+10,y:GROUND_Y-42,w:10,h:42};else if(o.type==='cactusShort')oB={x:o.x+9,y:GROUND_Y-24,w:10,h:24};else if(o.type==='rock')oB={x:o.x+16,y:GROUND_Y-24,w:14,h:24};else oB={x:o.x+14,y:GROUND_Y-42,w:10,h:42};if(dB.x<oB.x+oB.w&&dB.x+dB.w>oB.x&&dB.y<oB.y+oB.h&&dB.y+dB.h>oB.y)return true}return false}
@@ -286,9 +256,9 @@ const OBS=7;
 function update(){if(inputLockTimer>0)inputLockTimer--;if(landingSquish>0)landingSquish--;if(gameState!=='playing'){confetti=confetti.filter(c=>{c.x+=c.vx;c.y+=c.vy;c.vy+=.15;c.life--;return c.life>0});starParticles=starParticles.filter(s=>{s.x+=s.vx;s.y+=s.vy;s.vy+=.1;s.rot+=.15;s.life--;return s.life>0});particles=particles.filter(p=>{p.x+=p.vx;p.y+=p.vy;p.life--;return p.life>0});return}frame++;if(shakeFrames>0){shakeFrames--;shakeX=(Math.random()-.5)*shakeFrames*.7;shakeY=(Math.random()-.5)*shakeFrames*.7}else{shakeX=0;shakeY=0}if(stageFlash>0)stageFlash--;dino.gravity=getGravity();
   if(dino.jumping){if(dino.jumpHeld&&dino.vy<-1&&dino.jumpBoostLeft>0){dino.vy-=.6;dino.jumpBoostLeft--;if(dino.vy<-13)dino.vy=-13}dino.vy+=dino.gravity;dino.y+=dino.vy;if(dino.y>=GROUND_Y){dino.y=GROUND_Y;dino.vy=0;if(dino.jumping){landingSquish=12;if(getPerk()==='pachy'&&wasJumping)destroyNearestObstacle()}dino.jumping=false;jumpsUsed=0;dino.jumpHeld=false;wasJumping=false}}
   const spd=getSpeed();for(let m of mts){m.x-=spd*.15;if(m.x+m.w<-20){m.x=GAME_W+Math.random()*100;m.h=40+Math.random()*50;m.w=80+Math.random()*60}}spawnObs();
-  for(let o of obstacles){o.x-=spd;if(!o.passed&&o.x+o.w<dino.x){o.passed=true;obstaclesPassed++;const gm=getGoldMult();gold+=gm;goldEarnedThisRun+=gm;saveGold();const clr=dino.y-(GROUND_Y-(o.type==='cactusShort'||o.type==='rock'?30:48));if(clr>0&&clr<18){comboCount++;comboMult=comboCount>=5?5:comboCount>=3?3:2;const pts=10*comboMult;score+=pts;const gb=(comboCount>=5?8:comboCount>=3?5:3)*gm;gold+=gb;goldEarnedThisRun+=gb;saveGold();ap(o.x+o.w/2,GROUND_Y-70,comboCount>=5?'PERFECT x5! +'+gb+'🪙':comboCount>=3?'PERFECT x3! +'+gb+'🪙':'PERFECT! +'+gb+'🪙');comboUI.style.display='block';comboUI.textContent=`COMBO x${comboMult}`;setTimeout(()=>{if(comboCount===0)comboUI.style.display='none'},800)}else{comboCount=0;comboMult=1;comboUI.style.display='none';score+=10;ap(o.x+o.w/2,GROUND_Y-60,'+10')}const ms=Math.floor(score/100);if(ms>scoreMilestone){scoreMilestone=ms;const mb=5*gm;gold+=mb;goldEarnedThisRun+=mb;saveGold();ap(dino.x+16,GROUND_Y-80,'+'+mb+'🪙 MILESTONE!')}}}
+  for(let o of obstacles){o.x-=spd;if(!o.passed&&o.x+o.w<dino.x){o.passed=true;obstaclesPassed++;const gm=getGoldMult();gold+=gm;goldEarnedThisRun+=gm;saveGold();const clr=dino.y-(GROUND_Y-(o.type==='cactusShort'||o.type==='rock'?30:48));if(clr>0&&clr<18){comboCount++;comboMult=comboCount>=5?5:comboCount>=3?3:2;const pts=10*comboMult;score+=pts;const gb=(comboCount>=5?8:comboCount>=3?5:3)*gm;gold+=gb;goldEarnedThisRun+=gb;saveGold();ap(o.x+o.w/2,GROUND_Y-70,comboCount>=5?'퍼펙트 x5! +'+gb+'🪙':comboCount>=3?'퍼펙트 x3! +'+gb+'🪙':'퍼펙트! +'+gb+'🪙');comboUI.style.display='block';comboUI.textContent=`콤보 x${comboMult}`;setTimeout(()=>{if(comboCount===0)comboUI.style.display='none'},800)}else{comboCount=0;comboMult=1;comboUI.style.display='none';score+=10;ap(o.x+o.w/2,GROUND_Y-60,'+10')}const ms=Math.floor(score/100);if(ms>scoreMilestone){scoreMilestone=ms;const mb=5*gm;gold+=mb;goldEarnedThisRun+=mb;saveGold();ap(dino.x+16,GROUND_Y-80,'+'+mb+'🪙 기록 달성!')}}}
   obstacles=obstacles.filter(o=>o.x+o.w>-80);
-  if(chkCol()){if(shieldActive){shieldActive=false;ap(dino.x+21,dino.y-40,'🛡️ SHIELD BROKEN!')}else{gameState='gameOver';inputLockTimer=90;hideUI();shieldActive=false;comboCount=0;comboMult=1;comboUI.style.display='none';sp(dino.x+21,dino.y-25,25);shakeFrames=18;for(let i=0;i<8;i++)starParticles.push({x:dino.x+21,y:dino.y-40,vx:(Math.random()-.5)*3,vy:-2-Math.random()*4,life:60,maxLife:60,rot:Math.random()*Math.PI*2,size:3+Math.floor(Math.random()*3)});ap(dino.x+21,dino.y-55,'BONK!');if(score>hiScore){hiScore=score;localStorage.setItem('dinoHi',hiScore)}if(gameMode==='daily'&&score>dailyBest){dailyBest=score;localStorage.setItem('dailyBest',dailyBest)}}}
+  if(chkCol()){if(shieldActive){shieldActive=false;ap(dino.x+21,dino.y-40,'🛡️ 방패 파괴!')}else{gameState='gameOver';inputLockTimer=90;shieldActive=false;comboCount=0;comboMult=1;comboUI.style.display='none';sp(dino.x+21,dino.y-25,25);shakeFrames=18;for(let i=0;i<8;i++)starParticles.push({x:dino.x+21,y:dino.y-40,vx:(Math.random()-.5)*3,vy:-2-Math.random()*4,life:60,maxLife:60,rot:Math.random()*Math.PI*2,size:3+Math.floor(Math.random()*3)});ap(dino.x+21,dino.y-55,'BONK!');if(score>hiScore){hiScore=score;localStorage.setItem('dinoHi',hiScore)}if(gameMode==='daily'&&score>dailyBest){dailyBest=score;localStorage.setItem('dailyBest',dailyBest)}showGameOverBtns()}}
   if(obstaclesPassed>=OBS){
     const clearedStage=stage;
     const gm=getGoldMult();const stageBonus=clearedStage*10*gm;gold+=stageBonus;goldEarnedThisRun+=stageBonus;saveGold();shieldActive=false;
@@ -307,8 +277,7 @@ function loop(){update();draw();requestAnimationFrame(loop)}
 function resetGame(full){if(full){stage=1;score=0;goldEarnedThisRun=0;scoreMilestone=0;shieldActive=getPerk()==='stego'}obstaclesPassed=0;obstaclesSpawned=0;obstacles=[];particles=[];popups=[];confetti=[];speedLines=[];starParticles=[];obstacleTimer=40;shakeFrames=0;stageFlash=0;inputLockTimer=0;comboCount=0;comboMult=1;comboUI.style.display='none';dino.y=GROUND_Y;dino.vy=0;dino.jumping=false;wasJumping=false;jumpsUsed=0;dino.jumpHeld=false;dino.jumpBoostLeft=0;dino.gravity=getGravity();if(gameMode==='daily'){const n=new Date();const seed=n.getFullYear()*10000+(n.getMonth()+1)*100+n.getDate();let s=seed;srng=function(){s=(s*16807+0)%2147483647;return(s-1)/2147483646};for(let i=0;i<obstaclesSpawned;i++)srng()}else{srng=null}document.getElementById('score').textContent='00000';document.getElementById('hi').textContent=String(hiScore).padStart(5,'0');document.getElementById('stg').textContent=stage;goldDisplay.textContent=gold}
 
 // ─── INPUT ───
-let lastTapTime=0;
-function jp(){if(inputLockTimer>0)return;if(gameState==='waiting'){if(!unlocked[dinoType])return;gameState='playing';resetGame(true);hideUI();return}if(gameState==='episode'){resetGame(false);gameState='playing';return}if(gameState==='stageClear'){if(stage>=31){resetGame(true);gameState='waiting';showUI();return}resetGame(false);gameState='playing';return}if(gameState==='gameOver'){const now=Date.now();const cc=stage*20;if(gold>=cc&&now-lastTapTime<400&&lastTapTime>0){gold-=cc;saveGold();gameState='playing';obstaclesPassed=0;obstaclesSpawned=0;obstacles=[];particles=[];popups=[];confetti=[];speedLines=[];starParticles=[];obstacleTimer=40;shakeFrames=0;stageFlash=0;inputLockTimer=45;comboCount=0;comboMult=1;comboUI.style.display='none';dino.y=GROUND_Y;dino.vy=0;dino.jumping=false;wasJumping=false;jumpsUsed=0;dino.jumpHeld=false;dino.jumpBoostLeft=0;goldEarnedThisRun=0;scoreMilestone=Math.floor(score/100);lastTapTime=0;return}lastTapTime=now;resetGame(true);gameState='playing';return}if(gameState==='playing'&&!dino.jumping){dino.vy=getJumpPower();dino.jumping=true;dino.jumpHeld=true;dino.jumpBoostLeft=getJumpBoost();jumpsUsed=1;wasJumping=true}else if(gameState==='playing'&&jumpsUsed===1&&dino.vy>0&&canDoubleJump()){dino.vy=getJumpPower()*.8;jumpsUsed=2;dino.jumpHeld=true;dino.jumpBoostLeft=10;sp(dino.x+21,dino.y-10,5);if(getPerk()==='ankylo')destroyNearestObstacle()}else if(gameState==='playing'&&jumpsUsed===2&&dino.vy>0&&getPerk()==='quetzal'){dino.vy=getJumpPower()*.6;jumpsUsed=3;dino.jumpHeld=true;dino.jumpBoostLeft=6;sp(dino.x+21,dino.y-10,5)}}
+function jp(){if(inputLockTimer>0)return;if(gameState==='waiting'){if(!unlocked[dinoType])return;gameState='playing';resetGame(true);hideUI();return}if(gameState==='episode'){resetGame(false);gameState='playing';return}if(gameState==='stageClear'){if(stage>=31){resetGame(true);gameState='waiting';showUI();return}resetGame(false);gameState='playing';return}if(gameState==='gameOver'){return}if(gameState==='playing'&&!dino.jumping){dino.vy=getJumpPower();dino.jumping=true;dino.jumpHeld=true;dino.jumpBoostLeft=getJumpBoost();jumpsUsed=1;wasJumping=true}else if(gameState==='playing'&&jumpsUsed===1&&dino.vy>0&&canDoubleJump()){dino.vy=getJumpPower()*.8;jumpsUsed=2;dino.jumpHeld=true;dino.jumpBoostLeft=10;sp(dino.x+21,dino.y-10,5);if(getPerk()==='ankylo')destroyNearestObstacle()}else if(gameState==='playing'&&jumpsUsed===2&&dino.vy>0&&getPerk()==='quetzal'){dino.vy=getJumpPower()*.6;jumpsUsed=3;dino.jumpHeld=true;dino.jumpBoostLeft=6;sp(dino.x+21,dino.y-10,5)}}
 function jr(){dino.jumpHeld=false}
 document.addEventListener('keydown',e=>{if(gameState==='waiting'){if(e.code==='ArrowLeft'){cycleDino(-1);return}if(e.code==='ArrowRight'){cycleDino(1);return}}if(e.code==='Space'||e.code==='ArrowUp'){e.preventDefault();jp()}});
 document.addEventListener('keyup',e=>{if(e.code==='Space'||e.code==='ArrowUp')jr()});
