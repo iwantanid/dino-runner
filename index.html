@@ -50,6 +50,29 @@ const DINO_PERKS=['','','','',
   '수중적응: 1스테이지부터 더블점프',
   '거대익룡: 트리플 점프 가능'];
 const DINO_PERK_KEYS=['','','','','brachio','stego','ankylo','spino','pachy','dilopho','para','compso','mosa','quetzal'];
+const TIPS=[
+  '💡 길게 누르면 더 높이 점프해요 (홀드 점프)',
+  '💡 공중에서 한 번 더 탭하면 더블점프!',
+  '💡 퍼펙트 타이밍 점프는 콤보+추가 골드!',
+  '💡 모은 골드로 새 공룡을 구매하세요',
+  '💡 스테고: 첫 충돌을 방어해줘요',
+  '💡 스피노: 낙하가 느려서 체공시간↑',
+  '💡 케찰: 트리플 점프 가능!',
+  '💡 딜로포: 골드 획득량 2배',
+  '💡 콤프소: 히트박스가 작아요',
+  '💡 파라: 장애물을 미리 감지해요',
+  '💡 모사: 1스테이지부터 더블점프',
+  '💡 안킬로: 더블점프 시 장애물 파괴',
+  '💡 파키: 착지 충격파로 장애물 파괴',
+  '💡 브라키오: 점프력+부스트 ↑',
+  '💡 골드로 죽은 자리에서 이어하기!',
+  '💡 데일리 챌린지로 매일 기록 경신!',
+  '💡 빠른 연속 탭 = 작은 점프',
+  '💡 장애물 직전 점프가 고득점 비결',
+  '💡 100점마다 보너스 골드 획득',
+  '💡 5스테이지마다 에피소드 이벤트!',
+];
+let currentTip=0;
 function saveGold(){localStorage.setItem('dinoGold',gold);goldDisplay.textContent=gold;}
 function saveUnlock(){localStorage.setItem('dinoUnlocked',JSON.stringify(unlocked));}
 
@@ -234,7 +257,8 @@ function drawOverlay(){ctx.textAlign='center';
     ctx.fillStyle='#ff4444';ctx.font='bold 24px "Courier New"';ctx.fillText('게 임  오 버',GAME_W/2,GAME_H/2-40);
     ctx.fillStyle='#ccc';ctx.font='13px "Courier New"';ctx.fillText(`점수: ${score}  |  최고: ${hiScore}  |  🪙 +${goldEarnedThisRun}`,GAME_W/2,GAME_H/2-15);
     if(gameMode==='daily'){ctx.fillStyle='#ff922b';ctx.font='12px "Courier New"';ctx.fillText(`🔥 오늘의 최고: ${dailyBest}`,GAME_W/2,GAME_H/2+6)}
-    ctx.fillStyle='#aaa';ctx.font='11px "Courier New"';ctx.fillText('아래 버튼을 선택하세요',GAME_W/2,GAME_H/2+28);
+    ctx.fillStyle='#ffd700';ctx.font='bold 11px "Courier New"';ctx.fillText(TIPS[currentTip],GAME_W/2,GAME_H/2+24);
+    ctx.fillStyle='#aaa';ctx.font='11px "Courier New"';ctx.fillText('아래 버튼을 선택하세요',GAME_W/2,GAME_H/2+44);
   }
   ctx.textAlign='start'}
 
@@ -258,7 +282,7 @@ function update(){if(inputLockTimer>0)inputLockTimer--;if(landingSquish>0)landin
   const spd=getSpeed();for(let m of mts){m.x-=spd*.15;if(m.x+m.w<-20){m.x=GAME_W+Math.random()*100;m.h=40+Math.random()*50;m.w=80+Math.random()*60}}spawnObs();
   for(let o of obstacles){o.x-=spd;if(!o.passed&&o.x+o.w<dino.x){o.passed=true;obstaclesPassed++;const gm=getGoldMult();gold+=gm;goldEarnedThisRun+=gm;saveGold();const clr=dino.y-(GROUND_Y-(o.type==='cactusShort'||o.type==='rock'?30:48));if(clr>0&&clr<18){comboCount++;comboMult=comboCount>=5?5:comboCount>=3?3:2;const pts=10*comboMult;score+=pts;const gb=(comboCount>=5?8:comboCount>=3?5:3)*gm;gold+=gb;goldEarnedThisRun+=gb;saveGold();ap(o.x+o.w/2,GROUND_Y-70,comboCount>=5?'퍼펙트 x5! +'+gb+'🪙':comboCount>=3?'퍼펙트 x3! +'+gb+'🪙':'퍼펙트! +'+gb+'🪙');comboUI.style.display='block';comboUI.textContent=`콤보 x${comboMult}`;setTimeout(()=>{if(comboCount===0)comboUI.style.display='none'},800)}else{comboCount=0;comboMult=1;comboUI.style.display='none';score+=10;ap(o.x+o.w/2,GROUND_Y-60,'+10')}const ms=Math.floor(score/100);if(ms>scoreMilestone){scoreMilestone=ms;const mb=5*gm;gold+=mb;goldEarnedThisRun+=mb;saveGold();ap(dino.x+16,GROUND_Y-80,'+'+mb+'🪙 기록 달성!')}}}
   obstacles=obstacles.filter(o=>o.x+o.w>-80);
-  if(chkCol()){if(shieldActive){shieldActive=false;ap(dino.x+21,dino.y-40,'🛡️ 방패 파괴!')}else{gameState='gameOver';inputLockTimer=90;shieldActive=false;comboCount=0;comboMult=1;comboUI.style.display='none';sp(dino.x+21,dino.y-25,25);shakeFrames=18;for(let i=0;i<8;i++)starParticles.push({x:dino.x+21,y:dino.y-40,vx:(Math.random()-.5)*3,vy:-2-Math.random()*4,life:60,maxLife:60,rot:Math.random()*Math.PI*2,size:3+Math.floor(Math.random()*3)});ap(dino.x+21,dino.y-55,'BONK!');if(score>hiScore){hiScore=score;localStorage.setItem('dinoHi',hiScore)}if(gameMode==='daily'&&score>dailyBest){dailyBest=score;localStorage.setItem('dailyBest',dailyBest)}showGameOverBtns()}}
+  if(chkCol()){if(shieldActive){shieldActive=false;ap(dino.x+21,dino.y-40,'🛡️ 방패 파괴!')}else{gameState='gameOver';currentTip=Math.floor(Math.random()*TIPS.length);inputLockTimer=90;shieldActive=false;comboCount=0;comboMult=1;comboUI.style.display='none';sp(dino.x+21,dino.y-25,25);shakeFrames=18;for(let i=0;i<8;i++)starParticles.push({x:dino.x+21,y:dino.y-40,vx:(Math.random()-.5)*3,vy:-2-Math.random()*4,life:60,maxLife:60,rot:Math.random()*Math.PI*2,size:3+Math.floor(Math.random()*3)});ap(dino.x+21,dino.y-55,'BONK!');if(score>hiScore){hiScore=score;localStorage.setItem('dinoHi',hiScore)}if(gameMode==='daily'&&score>dailyBest){dailyBest=score;localStorage.setItem('dailyBest',dailyBest)}showGameOverBtns()}}
   if(obstaclesPassed>=OBS){
     const clearedStage=stage;
     const gm=getGoldMult();const stageBonus=clearedStage*10*gm;gold+=stageBonus;goldEarnedThisRun+=stageBonus;saveGold();shieldActive=false;
