@@ -242,7 +242,8 @@ function drawScene(){ctx.clearRect(0,0,GAME_W,GAME_H);const s=Math.min(stage-1,1
 }
 
 function drawOverlay(){ctx.textAlign='center';
-  if(gameState==='waiting'){ctx.fillStyle='rgba(255,255,255,0.82)';ctx.fillRect(0,0,GAME_W,GAME_H);drawDino(GAME_W/2-18,GROUND_Y,true,false);ctx.fillStyle='#535353';ctx.font='bold 22px "Courier New"';ctx.fillText('DINO RUNNER',GAME_W/2,GROUND_Y-85);
+  if(gameState==='waiting'){ctx.fillStyle='rgba(255,255,255,0.82)';ctx.fillRect(0,0,GAME_W,GAME_H);drawDino(GAME_W/2-18,GROUND_Y,true,false);ctx.fillStyle='#535353';ctx.font='bold 24px "Courier New"';ctx.fillText('DINO RUN',GAME_W/2,GROUND_Y-95);
+    ctx.fillStyle='#999';ctx.font='10px "Courier New"';ctx.fillText('안나 유빈 우진을 위해 아빠가 만들어준 두 번째 게임',GAME_W/2,GROUND_Y-78);
     ctx.fillStyle='#666';ctx.font='bold 16px "Courier New"';ctx.fillText(DINO_NAMES[dinoType],GAME_W/2,GROUND_Y-61);
     if(DINO_PERK_KEYS[dinoType]){ctx.fillStyle='#c8960f';ctx.font='10px "Courier New"';ctx.fillText('⭐ '+DINO_PERKS[dinoType],GAME_W/2,GROUND_Y-47)}
     if(gameMode==='daily'){ctx.fillStyle='#ff922b';ctx.font='bold 13px "Courier New"';ctx.fillText('🔥 DAILY CHALLENGE',GAME_W/2,GROUND_Y-30);ctx.fillStyle='#999';ctx.font='11px "Courier New"';ctx.fillText(`TODAY BEST: ${dailyBest}`,GAME_W/2,GROUND_Y-18)}}
