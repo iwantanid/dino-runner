@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>DINO RUNNER v12</title>
+<title>DINO RUNNER v13</title>
 <style>
   * { margin:0; padding:0; box-sizing:border-box; }
   html, body {
@@ -64,7 +64,7 @@
   <div>HI <span id="hi">00000</span></div>
   <div><span id="score">00000</span></div>
   <div>STAGE <span id="stg">1</span></div>
-  <div style="font-size:8px;color:#ccc;margin-top:2px;">v12</div>
+  <div style="font-size:8px;color:#ccc;margin-top:2px;">v13</div>
 </div>
 <div id="selBtns">
   <button class="selBtn" id="btnPrev">◀</button>
@@ -72,6 +72,10 @@
   <button class="selBtn" id="btnNext">▶</button>
 </div>
 <div id="selInfo">◀ ▶ 변경 · 중앙 TAP 시작</div>
+<div id="modeSwitch" style="position:absolute;bottom:10%;left:50%;transform:translateX(-50%);z-index:25;pointer-events:none;display:none;font-family:'Courier New',monospace;font-size:clamp(10px,2vw,13px);color:#aaa;text-align:center;letter-spacing:1px;">
+  <span id="modeLabel" style="pointer-events:auto;cursor:pointer;padding:6px 16px;border:1px solid #ddd;border-radius:6px;">MODE: CLASSIC</span>
+</div>
+<div id="comboUI" style="position:absolute;top:30%;left:50%;transform:translateX(-50%);z-index:15;pointer-events:none;display:none;font-family:'Courier New',monospace;font-size:clamp(14px,3vw,24px);color:#ffd700;font-weight:bold;text-shadow:0 0 8px rgba(255,215,0,0.5);letter-spacing:2px;"></div>
 <div id="overlay"></div>
 
 <script>
@@ -86,11 +90,24 @@ const btnNext = document.getElementById('btnNext');
 function showSelectionUI() {
   selBtns.classList.add('show');
   selInfo.classList.add('show');
+  modeSwitch.style.display = 'block';
+  updateModeLabel();
 }
 function hideSelectionUI() {
   selBtns.classList.remove('show');
   selInfo.classList.remove('show');
+  modeSwitch.style.display = 'none';
+  comboUI.style.display = 'none';
 }
+function updateModeLabel() {
+  modeLabel.textContent = gameMode==='daily' ? 'MODE: DAILY CHALLENGE' : 'MODE: CLASSIC';
+}
+
+modeLabel.addEventListener('click', e => {
+  e.stopPropagation();
+  gameMode = gameMode==='classic' ? 'daily' : 'classic';
+  updateModeLabel();
+});
 
 btnPrev.addEventListener('click', e => { e.stopPropagation(); cycleDino(-1); });
 btnNext.addEventListener('click', e => { e.stopPropagation(); cycleDino(1); });
@@ -127,6 +144,24 @@ let speedLines = [];
 let obstaclesSpawned = 0;
 let inputLockTimer = 0;
 let landingSquish = 0;
+
+// ─── GAME MODE ───
+let gameMode = 'classic'; // 'classic' | 'daily'
+let dailySeed = 0;
+let dailyBest = parseInt(localStorage.getItem('dailyBest')||'0');
+let comboCount = 0;
+let comboMultiplier = 1;
+const comboUI = document.getElementById('comboUI');
+const modeSwitch = document.getElementById('modeSwitch');
+const modeLabel = document.getElementById('modeLabel');
+
+// ─── SEEDED RANDOM ───
+function seededRandom(seed) {
+  let s = seed;
+  return function() { s = (s * 16807 + 0) % 2147483647; return (s - 1) / 2147483646; };
+}
+let srng = null;
+function seedRandom() { if (srng) return srng(); return Math.random(); }
 
 // ─── RESIZE ───
 const GAME_W = 900, GAME_H = 300;
@@ -375,6 +410,13 @@ function drawOverlay(){
     drawCurrentDino(GAME_W/2-18,GROUND_Y,true,false);
     ctx.fillStyle='#535353';ctx.font='bold 22px "Courier New"';ctx.fillText('DINO RUNNER',GAME_W/2,GROUND_Y-80);
     ctx.fillStyle='#666';ctx.font='bold 16px "Courier New"';ctx.fillText(`${dt.emoji} ${dt.name}`,GAME_W/2,GROUND_Y-56);
+    // Mode info
+    if (gameMode==='daily') {
+      ctx.fillStyle='#ff922b';ctx.font='bold 13px "Courier New"';
+      ctx.fillText(`🔥 DAILY CHALLENGE`,GAME_W/2,GROUND_Y-35);
+      ctx.fillStyle='#999';ctx.font='11px "Courier New"';
+      ctx.fillText(`TODAY BEST: ${dailyBest}`,GAME_W/2,GROUND_Y-22);
+    }
   } else if(gameState==='stageClear'){
     if(stage>=11){
       ctx.fillStyle='rgba(0,0,0,0.75)';ctx.fillRect(0,0,GAME_W,GAME_H);
@@ -393,16 +435,20 @@ function drawOverlay(){
     }
   } else if(gameState==='gameOver'){
     ctx.fillStyle='rgba(40,40,40,0.88)';ctx.fillRect(0,0,GAME_W,GAME_H);
-    ctx.fillStyle='#ff4444';ctx.font='bold 24px "Courier New"';ctx.fillText('G A M E  O V E R',GAME_W/2,GAME_H/2-20);
-    ctx.fillStyle='#ccc';ctx.font='13px "Courier New"';ctx.fillText(`SCORE: ${score}  |  HI: ${hiScore}`,GAME_W/2,GAME_H/2+10);
-    ctx.font='12px "Courier New"';ctx.fillText('TAP TO RESTART',GAME_W/2,GAME_H/2+35);
+    ctx.fillStyle='#ff4444';ctx.font='bold 24px "Courier New"';ctx.fillText('G A M E  O V E R',GAME_W/2,GAME_H/2-25);
+    ctx.fillStyle='#ccc';ctx.font='13px "Courier New"';ctx.fillText(`SCORE: ${score}  |  HI: ${hiScore}`,GAME_W/2,GAME_H/2+5);
+    if(gameMode==='daily'){
+      ctx.fillStyle='#ff922b';ctx.font='12px "Courier New"';
+      ctx.fillText(`🔥 TODAY BEST: ${dailyBest}`,GAME_W/2,GAME_H/2+24);
+    }
+    ctx.font='12px "Courier New"';ctx.fillText('TAP TO RESTART',GAME_W/2,GAME_H/2+44);
   }
   ctx.textAlign='start';
 }
 
 // ─── STAGE CONFIG ───
 function getSpeed(){return[3.5,4.0,4.5,5.0,5.5,6.0,6.5,7.5,8.5,9.0][Math.min(stage-1,9)];}
-function getGap(){const g=[[180,280],[170,260],[150,240],[130,210],[110,190],[95,170],[80,150],[70,135],[60,120],[55,105]][Math.min(stage-1,9)];return g[0]+Math.random()*(g[1]-g[0]);}
+function getGap(){const g=[[180,280],[170,260],[150,240],[130,210],[110,190],[95,170],[80,150],[70,135],[60,120],[55,105]][Math.min(stage-1,9)];return g[0]+seedRandom()*(g[1]-g[0]);}
 
 function maybeSpawnObstacle(){
   obstacleTimer--;if(obstacleTimer>0)return;
@@ -410,10 +456,10 @@ function maybeSpawnObstacle(){
   if(obstacles.length>0){const last=obstacles[obstacles.length-1];if(last.x+last.w+gap>GAME_W)return;}
   let t;
   if(obstaclesSpawned>=OBS_CLEAR-1){t='tree';}
-  else{const types=STAGE_OBSTACLES[Math.min(stage-1,9)];t=types[Math.floor(Math.random()*types.length)];}
+  else{const types=STAGE_OBSTACLES[Math.min(stage-1,9)];t=types[Math.floor(seedRandom()*types.length)];}
   const widths={cactusTall:48,cactusShort:42,rock:54,tree:60};
-  obstacles.push({x:GAME_W,type:t,w:widths[t],passed:false});obstaclesSpawned++;
-  const delay=stage<=3?25+Math.floor(Math.random()*15):stage<=6?18+Math.floor(Math.random()*12):12+Math.floor(Math.random()*10);
+  obstacles.push({x:GAME_W,type:t,w:widths[t],passed:false,perfectChecked:false});obstaclesSpawned++;
+  const delay=stage<=3?25+Math.floor(seedRandom()*15):stage<=6?18+Math.floor(seedRandom()*12):12+Math.floor(seedRandom()*10);
   obstacleTimer=delay;
 }
 
@@ -451,9 +497,34 @@ function update(){
   const spd=getSpeed();
   for(let m of mountains){m.x-=spd*.15;if(m.x+m.w<-20){m.x=GAME_W+Math.random()*100;m.h=40+Math.random()*50;m.w=80+Math.random()*60;}}
   maybeSpawnObstacle();
-  for(let o of obstacles){o.x-=spd;if(!o.passed&&o.x+o.w<dino.x){o.passed=true;obstaclesPassed++;score+=10;addPopup(o.x+o.w/2,GROUND_Y-60,'+10');}}
+  for(let o of obstacles){o.x-=spd;
+    if(!o.passed&&o.x+o.w<dino.x){
+      o.passed=true;obstaclesPassed++;
+      // Perfect jump check: dino bottom near obstacle top
+      const clearance = dino.y - (GROUND_Y - (o.type==='cactusShort'||o.type==='rock'?30:48));
+      const isPerfect = clearance > 0 && clearance < 18;
+      let pts = 10;
+      if (isPerfect) {
+        comboCount++;
+        if (comboCount >= 5) comboMultiplier = 5;
+        else if (comboCount >= 3) comboMultiplier = 3;
+        else comboMultiplier = 2;
+        pts = 10 * comboMultiplier;
+        addPopup(o.x+o.w/2,GROUND_Y-70,comboCount>=5?'PERFECT x5!':comboCount>=3?'PERFECT x3!':'PERFECT!');
+        // show combo UI
+        comboUI.style.display='block';
+        comboUI.textContent = `COMBO x${comboMultiplier}`;
+        setTimeout(()=>{if(comboCount===0)comboUI.style.display='none';},800);
+      } else {
+        comboCount = 0; comboMultiplier = 1;
+        comboUI.style.display='none';
+        addPopup(o.x+o.w/2,GROUND_Y-60,'+10');
+      }
+      score += pts;
+    }
+  }
   obstacles=obstacles.filter(o=>o.x+o.w>-80);
-  if(checkCollision()){gameState='gameOver';inputLockTimer=90;hideSelectionUI();spawnParticles(dino.x+21,dino.y-25,25);shakeFrames=18;for(let i=0;i<8;i++)starParticles.push({x:dino.x+21,y:dino.y-40,vx:(Math.random()-.5)*3,vy:-2-Math.random()*4,life:60,maxLife:60,rot:Math.random()*Math.PI*2,size:3+Math.floor(Math.random()*3)});addPopup(dino.x+21,dino.y-55,'BONK!');if(score>hiScore){hiScore=score;localStorage.setItem('dinoHi',hiScore);}}
+  if(checkCollision()){gameState='gameOver';inputLockTimer=90;hideSelectionUI();comboCount=0;comboMultiplier=1;comboUI.style.display='none';spawnParticles(dino.x+21,dino.y-25,25);shakeFrames=18;for(let i=0;i<8;i++)starParticles.push({x:dino.x+21,y:dino.y-40,vx:(Math.random()-.5)*3,vy:-2-Math.random()*4,life:60,maxLife:60,rot:Math.random()*Math.PI*2,size:3+Math.floor(Math.random()*3)});addPopup(dino.x+21,dino.y-55,'BONK!');if(score>hiScore){hiScore=score;localStorage.setItem('dinoHi',hiScore);}if(gameMode==='daily'&&score>dailyBest){dailyBest=score;localStorage.setItem('dailyBest',dailyBest);}}
   if(obstaclesPassed>=OBS_CLEAR){gameState='stageClear';inputLockTimer=90;hideSelectionUI();if(stage<10)stage++;else stage=11;stageFlash=30;const colors=['#ffd700','#ff6b6b','#51cf66','#339af0','#ff922b','#f06595','#20c997','#cc5de8'];for(let i=0;i<60;i++)confetti.push({x:GAME_W/2,y:GAME_H/2,vx:(Math.random()-.5)*10,vy:-3-Math.random()*8,life:40+Math.random()*40,maxLife:80,size:3+Math.floor(Math.random()*5),color:colors[Math.floor(Math.random()*colors.length)]});}
   particles=particles.filter(p=>{p.x+=p.vx;p.y+=p.vy;p.life--;return p.life>0;});
   popups=popups.filter(pu=>{pu.y-=0.7;pu.life--;return pu.life>0;});
@@ -478,7 +549,18 @@ function resetGame(full){
   if(full){stage=1;score=0;}
   obstaclesPassed=0;obstaclesSpawned=0;obstacles=[];particles=[];popups=[];confetti=[];speedLines=[];starParticles=[];
   obstacleTimer=40;shakeFrames=0;stageFlash=0;inputLockTimer=0;
+  comboCount=0;comboMultiplier=1;comboUI.style.display='none';
   dino.y=GROUND_Y;dino.vy=0;dino.jumping=false;jumpsUsed=0;
+  // Daily mode: seed random from today's date
+  if (gameMode==='daily') {
+    const now = new Date();
+    dailySeed = now.getFullYear()*10000 + (now.getMonth()+1)*100 + now.getDate();
+    srng = seededRandom(dailySeed);
+    // Warm up the RNG (consume some values for variety across stages)
+    for (let i=0;i<obstaclesSpawned;i++) srng();
+  } else {
+    srng = null;
+  }
   document.getElementById('score').textContent='00000';
   document.getElementById('hi').textContent=String(hiScore).padStart(5,'0');
   document.getElementById('stg').textContent=stage;
