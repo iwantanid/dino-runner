@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>DINO RUNNER v9</title>
+<title>DINO RUNNER v10</title>
 <style>
   * { margin:0; padding:0; box-sizing:border-box; }
   html, body {
@@ -47,7 +47,7 @@
   <div>HI <span id="hi">00000</span></div>
   <div><span id="score">00000</span></div>
   <div>STAGE <span id="stg">1</span></div>
-  <div style="font-size:8px;color:#ccc;margin-top:2px;">v9</div>
+  <div style="font-size:8px;color:#ccc;margin-top:2px;">v10</div>
 </div>
 <div id="overlay">
   <div id="msg">
@@ -96,6 +96,15 @@ const GROUND_Y = 250;
 const DINO_X = 65;
 const STAGE_NAMES = ['초원의 시작','선인장 지대','숲속 모험','사막 횡단','험난한 협곡','화산 지대','어둠의 숲','폭풍의 언덕','용암 협곡','신들의 땅'];
 
+// ─── DINO TYPES ───
+const DINO_TYPES = [
+  { id:'trex', name:'티라노', emoji:'🦖' },
+  { id:'trike', name:'트리케라', emoji:'🦏' },
+  { id:'raptor', name:'랩터', emoji:'🦅' },
+  { id:'ptero', name:'프테라', emoji:'🦇' },
+];
+let dinoType = parseInt(localStorage.getItem('dinoType')||'0');
+
 const dino = {
   x: DINO_X, y: GROUND_Y,
   vy: 0, jumping: false,
@@ -108,8 +117,8 @@ for (let i = 0; i < 6; i++) {
   mountains.push({ x: i * 160 + Math.random() * 40, h: 40 + Math.random() * 50, w: 80 + Math.random() * 60 });
 }
 
-// ─── DRAW DINO ───
-function drawDino(dx, dy, runFrame, jumping) {
+// ─── DRAW DINO (T-Rex, original) ───
+function drawDinoTrex(dx, dy, runFrame, jumping) {
   const cBody = '#535353', cDark = '#3c3c3c';
   const squish = landingSquish > 0 ? Math.sin(landingSquish*0.5) * (landingSquish/8) : 0;
   const squishY = Math.abs(squish) * 4;
@@ -184,6 +193,114 @@ function drawDino(dx, dy, runFrame, jumping) {
   // mouth
   ctx.fillStyle = cDark;
   ctx.fillRect(dx+18, dy-34, 15, 2);
+}
+
+// ─── DRAW DINO: Triceratops ───
+function drawDinoTrike(dx, dy, runFrame, jumping) {
+  const cBody = '#535353', cDark = '#3c3c3c';
+  const squish = landingSquish > 0 ? Math.sin(landingSquish*0.5)*(landingSquish/8) : 0;
+  const sqY = Math.abs(squish)*4, sqW = squish*2;
+  ctx.fillStyle = cBody;
+  // body
+  ctx.fillRect(dx+8-sqW, dy-28+sqY, 22+sqW*2, 13-sqY);
+  ctx.fillRect(dx+4, dy-22, 10, 8);
+  ctx.fillRect(dx+12, dy-16, 12, 5);
+  // tail (short)
+  ctx.fillRect(dx-3, dy-20, 8, 5);
+  // head with frill
+  ctx.fillStyle = cBody;
+  ctx.fillRect(dx+26, dy-44, 12, 14); // head
+  ctx.fillRect(dx+24, dy-48, 16, 6); // frill top
+  ctx.fillRect(dx+22, dy-38, 18, 4); // frill bottom
+  // horns
+  ctx.fillStyle = cDark;
+  ctx.fillRect(dx+30, dy-50, 3, 5); // center horn
+  ctx.fillRect(dx+26, dy-50, 2, 4); // left horn
+  ctx.fillRect(dx+36, dy-50, 2, 4); // right horn
+  // snout
+  ctx.fillStyle = cBody;
+  ctx.fillRect(dx+36, dy-38, 6, 5);
+  // beak
+  ctx.fillStyle = cDark;
+  ctx.fillRect(dx+38, dy-36, 4, 2);
+  // legs
+  const lw=6, lh=11;
+  if (jumping) { ctx.fillRect(dx+8,dy-13,lw,4); ctx.fillRect(dx+20,dy-13,lw,4); }
+  else if (runFrame) { ctx.fillRect(dx+6,dy-13,lw,lh-2); ctx.fillRect(dx+22,dy-13,lw,lh); }
+  else { ctx.fillRect(dx+6,dy-13,lw,lh); ctx.fillRect(dx+22,dy-13,lw,lh-2); }
+  // eye
+  ctx.fillStyle='#fff'; ctx.fillRect(dx+29,dy-43,5,5);
+  ctx.fillStyle='#000'; ctx.fillRect(dx+31,dy-42,2,2);
+  // mouth
+  ctx.fillStyle=cDark; ctx.fillRect(dx+28,dy-33,10,2);
+}
+
+// ─── DRAW DINO: Raptor ───
+function drawDinoRaptor(dx, dy, runFrame, jumping) {
+  const cBody = '#535353', cDark = '#3c3c3c';
+  const squish = landingSquish > 0 ? Math.sin(landingSquish*0.5)*(landingSquish/8) : 0;
+  const sqY = Math.abs(squish)*4, sqW = squish*2;
+  ctx.fillStyle = cBody;
+  // sleek body
+  ctx.fillRect(dx+6-sqW, dy-26+sqY, 20+sqW*2, 11-sqY);
+  ctx.fillRect(dx+3, dy-20, 14, 7);
+  // long tail
+  ctx.fillRect(dx-6, dy-18, 12, 4);
+  ctx.fillRect(dx-12, dy-16, 9, 3);
+  // head
+  ctx.fillRect(dx+22, dy-40, 12, 12);
+  ctx.fillRect(dx+30, dy-36, 10, 5); // snout
+  // crest
+  ctx.fillStyle=cDark; ctx.fillRect(dx+24,dy-43,3,4);
+  // eye
+  ctx.fillStyle='#fff'; ctx.fillRect(dx+26,dy-38,5,5);
+  ctx.fillStyle='#000'; ctx.fillRect(dx+28,dy-37,2,2);
+  // teeth
+  ctx.fillStyle=cBody;
+  for (let i=0;i<3;i++) ctx.fillRect(dx+32+i*3,dy-34,2,3);
+  // legs (longer, springy)
+  const lw=5, lh=14;
+  ctx.fillStyle=cBody;
+  if (jumping) { ctx.fillRect(dx+6,dy-14,lw,4); ctx.fillRect(dx+18,dy-14,lw,4); }
+  else if (runFrame) { ctx.fillRect(dx+4,dy-14,lw,lh-3); ctx.fillRect(dx+19,dy-14,lw,lh); }
+  else { ctx.fillRect(dx+4,dy-14,lw,lh); ctx.fillRect(dx+19,dy-14,lw,lh-3); }
+  // claw
+  ctx.fillStyle=cDark; ctx.fillRect(dx+14,dy-16,3,3);
+}
+
+// ─── DRAW DINO: Pterodactyl ───
+function drawDinoPtero(dx, dy, runFrame, jumping) {
+  const cBody = '#535353', cDark = '#3c3c3c';
+  ctx.fillStyle = cBody;
+  // body
+  ctx.fillRect(dx+12, dy-22, 16, 12);
+  ctx.fillRect(dx+8, dy-18, 8, 6);
+  // tail
+  ctx.fillRect(dx+3, dy-16, 8, 3);
+  // head + beak
+  ctx.fillRect(dx+24, dy-34, 10, 10);
+  ctx.fillRect(dx+32, dy-30, 12, 4); // long beak
+  // crest
+  ctx.fillStyle=cDark; ctx.fillRect(dx+25,dy-38,4,5);
+  // eye
+  ctx.fillStyle='#fff'; ctx.fillRect(dx+27,dy-32,4,4);
+  ctx.fillStyle='#000'; ctx.fillRect(dx+28,dy-31,2,2);
+  // wings (flap when jumping)
+  ctx.fillStyle=cBody;
+  const wingFlap = jumping ? 6 : 0;
+  ctx.fillRect(dx+8, dy-30-wingFlap, 4, 12+wingFlap);
+  ctx.fillRect(dx+20, dy-30-wingFlap, 4, 12+wingFlap);
+  // legs (tiny)
+  ctx.fillStyle=cBody;
+  if (jumping) { ctx.fillRect(dx+14,dy-12,4,3); ctx.fillRect(dx+22,dy-12,4,3); }
+  else if (runFrame) { ctx.fillRect(dx+13,dy-12,4,6); ctx.fillRect(dx+23,dy-12,4,8); }
+  else { ctx.fillRect(dx+13,dy-12,4,8); ctx.fillRect(dx+23,dy-12,4,6); }
+}
+
+// ─── DRAW CURRENT DINO ───
+function drawCurrentDino(dx, dy, runFrame, jumping) {
+  const fns = [drawDinoTrex, drawDinoTrike, drawDinoRaptor, drawDinoPtero];
+  fns[dinoType](dx, dy, runFrame, jumping);
 }
 
 // ─── DRAW BG ───
@@ -396,7 +513,7 @@ function drawScene() {
   drawSpeedLines();
 
   const runFrame = Math.floor(frame/6)%2===0;
-  drawDino(dino.x, dino.y, runFrame, dino.jumping);
+  drawCurrentDino(dino.x, dino.y, runFrame, dino.jumping);
 
   for (let o of obstacles) {
     if (o.type==='cactusTall') drawCactusTall(o.x);
@@ -461,12 +578,23 @@ function drawOverlay() {
   ctx.textAlign = 'center';
 
   if (gameState==='waiting') {
-    drawDino(GAME_W/2-21, GROUND_Y, true, false);
+    // Dino selection UI
+    const dt = DINO_TYPES[dinoType];
+    drawCurrentDino(GAME_W/2-18, GROUND_Y, true, false);
+    // left/right arrows
+    ctx.fillStyle = '#ccc';
+    ctx.font = 'bold 28px "Courier New"';
+    ctx.fillText('◀', GAME_W/2-120, GROUND_Y-30);
+    ctx.fillText('▶', GAME_W/2+105, GROUND_Y-30);
+    // dino name
     ctx.fillStyle = '#535353';
     ctx.font = 'bold 22px "Courier New"';
     ctx.fillText('DINO RUNNER', GAME_W/2, GROUND_Y-80);
-    ctx.font = '13px "Courier New"';
-    ctx.fillText('TAP TO START', GAME_W/2, GROUND_Y+10);
+    ctx.font = 'bold 15px "Courier New"';
+    ctx.fillText(`${dt.emoji} ${dt.name}`, GAME_W/2, GROUND_Y-58);
+    ctx.fillStyle = '#999';
+    ctx.font = '11px "Courier New"';
+    ctx.fillText('◀ ▶ 로 선택 · TAP TO START', GAME_W/2, GROUND_Y+12);
   } else if (gameState==='stageClear') {
     // ── CELEBRATION THEME ──
     ctx.fillStyle = 'rgba(255,255,255,0.82)';
@@ -731,9 +859,22 @@ function doJump() {
 
 document.addEventListener('touchstart', e => { e.preventDefault(); doJump(); }, {passive:false});
 document.addEventListener('keydown', e => {
+  if (gameState==='waiting') {
+    if (e.code==='ArrowLeft') { dinoType=(dinoType+3)%4; localStorage.setItem('dinoType',dinoType); return; }
+    if (e.code==='ArrowRight') { dinoType=(dinoType+1)%4; localStorage.setItem('dinoType',dinoType); return; }
+  }
   if (e.code==='Space'||e.code==='ArrowUp') { e.preventDefault(); doJump(); }
 });
-canvas.addEventListener('click', e => { e.preventDefault(); doJump(); });
+canvas.addEventListener('click', e => {
+  e.preventDefault();
+  if (gameState==='waiting') {
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    if (x < rect.width * 0.3) { dinoType=(dinoType+3)%4; localStorage.setItem('dinoType',dinoType); return; }
+    if (x > rect.width * 0.7) { dinoType=(dinoType+1)%4; localStorage.setItem('dinoType',dinoType); return; }
+  }
+  doJump();
+});
 document.addEventListener('gesturestart', e=>e.preventDefault());
 document.addEventListener('gesturechange', e=>e.preventDefault());
 document.addEventListener('gestureend', e=>e.preventDefault());
