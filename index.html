@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>DINO RUNNER v25</title>
+<title>DINO RUNNER v26</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}html,body{width:100%;height:100%;overflow:hidden;background:#fff;touch-action:manipulation;-webkit-tap-highlight-color:transparent;-webkit-user-select:none;user-select:none;font-family:'Courier New',monospace;position:fixed;top:0;left:0}canvas{display:block;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);image-rendering:crisp-edges;image-rendering:pixelated;background:#f0f4f8}#ui{position:absolute;top:0;right:0;padding:6px 10px;font-size:11px;color:#888;text-align:right;pointer-events:none;letter-spacing:1px;z-index:10}#ui div{line-height:1.5}#ui span{color:#535353;font-weight:bold}#pauseBtn{position:absolute;top:6px;left:8px;z-index:40;display:none;font-size:20px;background:rgba(0,0,0,.3);color:#fff;border:none;border-radius:8px;width:36px;height:36px;cursor:pointer;line-height:1;-webkit-tap-highlight-color:transparent}#pauseBtn.show{display:block}#pauseBtn:active{background:rgba(0,0,0,.5)}#selBtns{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:20;display:none;flex-direction:row;align-items:center;justify-content:space-between}#selBtns.show{display:flex}.selBtn{pointer-events:auto;width:18%;height:60%;min-width:44px;display:flex;align-items:center;justify-content:center;font-size:clamp(24px,6vw,48px);color:#bbb;background:transparent;border:none;cursor:pointer;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none;font-family:'Courier New',monospace}.selBtn:active{color:#535353}#selInfo{position:absolute;bottom:8%;left:50%;transform:translateX(-50%);text-align:center;pointer-events:none;z-index:21;display:none;color:#999;font-family:'Courier New',monospace;font-size:clamp(9px,1.8vw,12px);letter-spacing:1px}#selInfo.show{display:block}#modeBtn{position:absolute;bottom:2%;left:50%;transform:translateX(-50%);z-index:25;display:none;font-family:'Courier New',monospace;font-size:clamp(10px,2vw,12px);color:#aaa;background:transparent;border:1px solid #ddd;border-radius:6px;padding:5px 14px;cursor:pointer;letter-spacing:1px;-webkit-tap-highlight-color:transparent}#modeBtn.show{display:block}#comboUI{position:absolute;top:22%;left:50%;transform:translateX(-50%);z-index:15;pointer-events:none;display:none;font-family:'Courier New',monospace;font-size:clamp(14px,3vw,24px);color:#ffd700;font-weight:bold;text-shadow:0 0 8px rgba(255,215,0,0.5);letter-spacing:2px}#buyOverlay{position:absolute;bottom:12%;left:50%;transform:translateX(-50%);z-index:30;display:none;text-align:center}#buyOverlay.show{display:block}#buyBtn{font-family:'Courier New',monospace;font-size:clamp(11px,2vw,14px);background:#ffd700;color:#2a1800;border:none;border-radius:8px;padding:8px 20px;cursor:pointer;font-weight:bold;letter-spacing:1px;-webkit-tap-highlight-color:transparent}#buyBtn:active{background:#c8960f}#lockedLabel{color:#888;font-size:clamp(10px,2vw,12px);margin-bottom:4px}#perkLabel{color:#c8960f;font-size:clamp(9px,1.8vw,11px);margin-top:2px}
 #gameOverBtns{position:absolute;bottom:10%;left:50%;transform:translateX(-50%);z-index:35;display:none;gap:16px}#gameOverBtns.show{display:flex;flex-wrap:wrap;justify-content:center}.goBtn{font-family:'Courier New',monospace;font-size:clamp(12px,2.5vw,15px);padding:12px 20px;border-radius:10px;cursor:pointer;font-weight:bold;letter-spacing:1px;-webkit-tap-highlight-color:transparent;border:none;white-space:nowrap}#btnContinue{background:#ffd700;color:#2a1800}#btnContinue:active{background:#c8960f}#btnContinue.disabled{background:#666;color:#999;pointer-events:none}#btnRestart{background:#535353;color:#ddd}#btnRestart:active{background:#3c3c3c}
@@ -14,7 +14,7 @@
 <body>
 <canvas id="game"></canvas>
 <div id="ui">
-<div>최고 <span id="hi">00000</span></div><div><span id="score">00000</span></div><div>🪙 <span id="goldDisplay">0</span></div><div>스테이지 <span id="stg">1</span>/30</div><div style="font-size:8px;color:#aaa;margin-top:2px">FPS <span id="perf">--</span></div><div style="font-size:8px;color:#ccc">v25</div>
+<div>최고 <span id="hi">00000</span></div><div><span id="score">00000</span></div><div>🪙 <span id="goldDisplay">0</span></div><div>스테이지 <span id="stg">1</span>/30</div><div style="font-size:8px;color:#aaa;margin-top:2px">FPS <span id="perf">--</span></div><div style="font-size:8px;color:#ccc">v26</div>
 </div>
 <button id="pauseBtn">⏸</button>
 <div id="selBtns"><button class="selBtn" id="btnPrev">◀</button><div style="flex:1"></div><button class="selBtn" id="btnNext">▶</button></div>
@@ -157,16 +157,35 @@ function getHitbox(){if(getPerk()==='compso')return{x:dino.x+21,y:dino.y-24,w:10
 
 // ─── ADAPTIVE PERFORMANCE ───
 const QUALITY_NAMES=['CORE','LOW','MID','FULL'];
-const perf={last:0,avgDt:16.7,fps:60,q:3,frames:0,good:0,bad:0};
+const perf={last:0,avgDt:16.7,fps:60,q:3,frames:0,good:0,bad:0,coreBad:0,warmup:180};
+function perfTarget(){
+  // v26: conservative thresholds. iPhone/modern devices should not fall to CORE
+  // from short Safari/Telegram WebView timing hiccups. CORE is only for sustained <24fps.
+  if(perf.fps<24)return 0;
+  if(perf.fps<38)return 1;
+  if(perf.fps<50)return 2;
+  return 3;
+}
 function perfTick(now){
-  if(!perf.last){perf.last=now||performance.now();return 16.7}
-  const t=now||performance.now(),raw=Math.max(1,Math.min(80,t-perf.last));perf.last=t;
-  perf.avgDt=perf.avgDt*.92+raw*.08;perf.fps=1000/perf.avgDt;perf.frames++;
-  let target=perf.fps<34?0:perf.fps<43?1:perf.fps<53?2:3;
-  if(target<perf.q){perf.bad++;perf.good=0;if(perf.bad>=8){perf.q=target;perf.bad=0;trimFX()}}
-  else if(target>perf.q){perf.good++;perf.bad=0;if(perf.good>=90){perf.q++;perf.good=0}}
-  else{perf.good=0;perf.bad=0}
-  if(perf.frames%20===0&&perfEl)perfEl.textContent=Math.round(perf.fps)+' '+QUALITY_NAMES[perf.q];
+  const t=now||performance.now();
+  if(!perf.last){perf.last=t;return 16.7}
+  let raw=t-perf.last;perf.last=t;
+  if(document.hidden||raw>250){return 16.7}
+  raw=Math.max(1,Math.min(100,raw));
+  perf.avgDt=perf.avgDt*.96+raw*.04;perf.fps=1000/perf.avgDt;perf.frames++;
+  const target=perfTarget();
+  if(perf.frames<perf.warmup||gameState!=='playing'){
+    perf.good=0;perf.bad=0;perf.coreBad=0;
+  }else if(target<perf.q){
+    perf.good=0;perf.bad++;
+    if(target===0)perf.coreBad++;else perf.coreBad=0;
+    const need=target===0?120:45;
+    if(perf.bad>=need&&(target>0||perf.coreBad>=120)){perf.q=Math.max(target,perf.q-1);perf.bad=0;trimFX()}
+  }else if(target>perf.q){
+    perf.bad=0;perf.coreBad=0;perf.good++;
+    if(perf.good>=120){perf.q++;perf.good=0}
+  }else{perf.good=0;perf.bad=0;perf.coreBad=0}
+  if(perf.frames%30===0&&perfEl)perfEl.textContent=Math.round(perf.fps)+' '+QUALITY_NAMES[perf.q];
   return raw;
 }
 function fx(lvl){return perf.q>=lvl}
