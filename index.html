@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>DINO RUNNER v22</title>
+<title>DINO RUNNER v23</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}html,body{width:100%;height:100%;overflow:hidden;background:#fff;touch-action:manipulation;-webkit-tap-highlight-color:transparent;-webkit-user-select:none;user-select:none;font-family:'Courier New',monospace;position:fixed;top:0;left:0}canvas{display:block;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);image-rendering:crisp-edges;image-rendering:pixelated;background:#f0f4f8}#ui{position:absolute;top:0;right:0;padding:6px 10px;font-size:11px;color:#888;text-align:right;pointer-events:none;letter-spacing:1px;z-index:10}#ui div{line-height:1.5}#ui span{color:#535353;font-weight:bold}#pauseBtn{position:absolute;top:6px;left:8px;z-index:40;display:none;font-size:20px;background:rgba(0,0,0,.3);color:#fff;border:none;border-radius:8px;width:36px;height:36px;cursor:pointer;line-height:1;-webkit-tap-highlight-color:transparent}#pauseBtn.show{display:block}#pauseBtn:active{background:rgba(0,0,0,.5)}#selBtns{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:20;display:none;flex-direction:row;align-items:center;justify-content:space-between}#selBtns.show{display:flex}.selBtn{pointer-events:auto;width:18%;height:60%;min-width:44px;display:flex;align-items:center;justify-content:center;font-size:clamp(24px,6vw,48px);color:#bbb;background:transparent;border:none;cursor:pointer;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none;font-family:'Courier New',monospace}.selBtn:active{color:#535353}#selInfo{position:absolute;bottom:8%;left:50%;transform:translateX(-50%);text-align:center;pointer-events:none;z-index:21;display:none;color:#999;font-family:'Courier New',monospace;font-size:clamp(9px,1.8vw,12px);letter-spacing:1px}#selInfo.show{display:block}#modeBtn{position:absolute;bottom:2%;left:50%;transform:translateX(-50%);z-index:25;display:none;font-family:'Courier New',monospace;font-size:clamp(10px,2vw,12px);color:#aaa;background:transparent;border:1px solid #ddd;border-radius:6px;padding:5px 14px;cursor:pointer;letter-spacing:1px;-webkit-tap-highlight-color:transparent}#modeBtn.show{display:block}#comboUI{position:absolute;top:22%;left:50%;transform:translateX(-50%);z-index:15;pointer-events:none;display:none;font-family:'Courier New',monospace;font-size:clamp(14px,3vw,24px);color:#ffd700;font-weight:bold;text-shadow:0 0 8px rgba(255,215,0,0.5);letter-spacing:2px}#buyOverlay{position:absolute;bottom:12%;left:50%;transform:translateX(-50%);z-index:30;display:none;text-align:center}#buyOverlay.show{display:block}#buyBtn{font-family:'Courier New',monospace;font-size:clamp(11px,2vw,14px);background:#ffd700;color:#2a1800;border:none;border-radius:8px;padding:8px 20px;cursor:pointer;font-weight:bold;letter-spacing:1px;-webkit-tap-highlight-color:transparent}#buyBtn:active{background:#c8960f}#lockedLabel{color:#888;font-size:clamp(10px,2vw,12px);margin-bottom:4px}#perkLabel{color:#c8960f;font-size:clamp(9px,1.8vw,11px);margin-top:2px}
 #gameOverBtns{position:absolute;bottom:10%;left:50%;transform:translateX(-50%);z-index:35;display:none;gap:16px}#gameOverBtns.show{display:flex;flex-wrap:wrap;justify-content:center}.goBtn{font-family:'Courier New',monospace;font-size:clamp(12px,2.5vw,15px);padding:12px 20px;border-radius:10px;cursor:pointer;font-weight:bold;letter-spacing:1px;-webkit-tap-highlight-color:transparent;border:none;white-space:nowrap}#btnContinue{background:#ffd700;color:#2a1800}#btnContinue:active{background:#c8960f}#btnContinue.disabled{background:#666;color:#999;pointer-events:none}#btnRestart{background:#535353;color:#ddd}#btnRestart:active{background:#3c3c3c}
@@ -14,7 +14,7 @@
 <body>
 <canvas id="game"></canvas>
 <div id="ui">
-<div>최고 <span id="hi">00000</span></div><div><span id="score">00000</span></div><div>🪙 <span id="goldDisplay">0</span></div><div>스테이지 <span id="stg">1</span>/30</div><div style="font-size:8px;color:#ccc;margin-top:2px">v22</div>
+<div>최고 <span id="hi">00000</span></div><div><span id="score">00000</span></div><div>🪙 <span id="goldDisplay">0</span></div><div>스테이지 <span id="stg">1</span>/30</div><div style="font-size:8px;color:#ccc;margin-top:2px">v23</div>
 </div>
 <button id="pauseBtn">⏸</button>
 <div id="selBtns"><button class="selBtn" id="btnPrev">◀</button><div style="flex:1"></div><button class="selBtn" id="btnNext">▶</button></div>
@@ -32,6 +32,7 @@ const lockedLabel=document.getElementById('lockedLabel'),goldDisplay=document.ge
 const perkLabel=document.getElementById('perkLabel'),pauseBtn=document.getElementById('pauseBtn');
 const gameOverBtns=document.getElementById('gameOverBtns');
 const btnContinue=document.getElementById('btnContinue'),btnRestart=document.getElementById('btnRestart');
+const scoreEl=document.getElementById('score'),hiEl=document.getElementById('hi'),stgEl=document.getElementById('stg');
 
 // ─── GOLD & UNLOCK ───
 let gold=parseInt(localStorage.getItem('dinoGold')||'0');
@@ -57,7 +58,9 @@ const TIPS=[
   '💡 100점마다 보너스 골드 획득','💡 5스테이지마다 에피소드 이벤트!',
 ];
 let currentTip=0;
-function saveGold(){localStorage.setItem('dinoGold',gold);goldDisplay.textContent=gold;}
+let goldDirty=false;
+function saveGold(force){goldDisplay.textContent=gold;goldDirty=true;if(force){localStorage.setItem('dinoGold',gold);goldDirty=false;}}
+function flushGold(force){if(goldDirty&&(force||frame%30===0||gameState!=='playing')){localStorage.setItem('dinoGold',gold);goldDirty=false;}}
 function saveUnlock(){localStorage.setItem('dinoUnlocked',JSON.stringify(unlocked));}
 
 // ─── EPISODES ───
@@ -78,7 +81,7 @@ function updateBuyUI(){if(!unlocked[dinoType]&&gameState==='waiting'){buyOverlay
 btnPrev.addEventListener('click',e=>{e.stopPropagation();cycleDino(-1);});
 btnNext.addEventListener('click',e=>{e.stopPropagation();cycleDino(1);});
 function cycleDino(dir){let nd=dinoType;for(let i=0;i<14;i++){nd=(nd+dir+14)%14;if(unlocked[nd]){dinoType=nd;break;}}localStorage.setItem('dinoType',dinoType);updateSelInfo();updateBuyUI();}
-buyBtn.addEventListener('click',e=>{e.stopPropagation();if(gold>=DINO_PRICES[dinoType]&&!unlocked[dinoType]){gold-=DINO_PRICES[dinoType];unlocked[dinoType]=true;saveGold();saveUnlock();updateSelInfo();buyOverlay.classList.remove('show');}});
+buyBtn.addEventListener('click',e=>{e.stopPropagation();if(gold>=DINO_PRICES[dinoType]&&!unlocked[dinoType]){gold-=DINO_PRICES[dinoType];unlocked[dinoType]=true;saveGold(true);saveUnlock();updateSelInfo();buyOverlay.classList.remove('show');}});
 
 // ─── PAUSE ───
 pauseBtn.addEventListener('click',e=>{e.stopPropagation();if(gameState==='playing'){gameState='paused';pauseBtn.textContent='▶'}else if(gameState==='paused'){gameState='playing';pauseBtn.textContent='⏸'}});
@@ -89,7 +92,7 @@ function showGameOverBtns(){
   if(gold>=cc){btnContinue.textContent='🪙 이어하기 ('+cc+' 골드)';btnContinue.classList.remove('disabled');}
   else{btnContinue.textContent='🪙 골드 부족 ('+cc+')';btnContinue.classList.add('disabled');}
 }
-btnContinue.addEventListener('click',e=>{e.stopPropagation();const cc=stage*20;if(gold>=cc&&gameState==='gameOver'){gold-=cc;saveGold();continueGame();}});
+btnContinue.addEventListener('click',e=>{e.stopPropagation();const cc=stage*20;if(gold>=cc&&gameState==='gameOver'){gold-=cc;saveGold(true);continueGame();}});
 btnRestart.addEventListener('click',e=>{e.stopPropagation();if(gameState==='gameOver'){resetGame(true);gameState='playing';gameOverBtns.classList.remove('show');pauseBtn.classList.add('show');}});
 function continueGame(){gameState='playing';obstaclesPassed=0;obstaclesSpawned=0;obstacles=[];particles=[];popups=[];confetti=[];speedLines=[];starParticles=[];obstacleTimer=40;shakeFrames=0;stageFlash=0;inputLockTimer=45;comboCount=0;comboMult=1;comboUI.style.display='none';dino.y=GROUND_Y;dino.vy=0;dino.jumping=false;wasJumping=false;jumpsUsed=0;dino.jumpHeld=false;dino.jumpBoostLeft=0;goldEarnedThisRun=0;scoreMilestone=Math.floor(score/100);gameOverBtns.classList.remove('show');pauseBtn.classList.add('show');}
 
@@ -113,7 +116,7 @@ let obstacles=[],particles=[],popups=[],confetti=[],starParticles=[];
 let shakeX=0,shakeY=0,shakeFrames=0,stageFlash=0,jumpsUsed=0;
 let speedLines=[],obstaclesSpawned=0,inputLockTimer=0,landingSquish=0;
 let comboCount=0,comboMult=1,scoreMilestone=0,goldEarnedThisRun=0;
-let shieldActive=false,wasJumping=false;
+let shieldActive=false,wasJumping=false,jumpBuffer=0,coyoteTime=0;
 
 // ─── RESIZE ───
 const GAME_W=900,GAME_H=300;
@@ -160,16 +163,14 @@ let mts=[];for(let i=0;i<6;i++)mts.push({x:i*160+Math.random()*40,h:40+Math.rand
 
 // ─── DINO DRAW (14) ───
 // Helper: body bounce offset during running (sinusoidal, 4px amplitude)
-function bodyBob(){return dino.jumping?0:Math.abs(Math.sin(frame*.25))*4;}
+let bobFrame=-1,bobValue=0;function bodyBob(){if(bobFrame!==frame){bobFrame=frame;bobValue=dino.jumping?0:Math.abs(Math.sin(frame*.25))*4}return bobValue;}
 // Helper: leg phase (0-3 for 4-frame animation cycle, interpolated)
 function legPhase(){return dino.jumping?0:((frame%12)/3)|0;}
+const LEG_DY_L=[0,-2,-4,-2],LEG_DY_R=[-4,0,0,-2],LEG_X_L=[3,4,5,4],LEG_X_R=[21,20,19,20];
 function drawLegs(dx,dy,lw,lh,rf,jp){
-  const ph=legPhase(),bob=bodyBob(),by=dy-bob;
+  const ph=legPhase(),by=dy-bodyBob();
   if(jp){ctx.fillRect(dx+6,by-15,lw,5);ctx.fillRect(dx+18,by-15,lw,5);return}
-  // 4-phase run cycle
-  const llh=[lh,lh-2,lh-4,lh-2],rlh=[lh-4,lh,lh,lh-2]; // alternating leg heights
-  const llx=[dx+3,dx+4,dx+5,dx+4],rlx=[dx+21,dx+20,dx+19,dx+20]; // slight foot slide
-  ctx.fillRect(llx[ph],by-15,lw,llh[ph]);ctx.fillRect(rlx[ph],by-15,lw,rlh[ph]);
+  ctx.fillRect(dx+LEG_X_L[ph],by-15,lw,lh+LEG_DY_L[ph]);ctx.fillRect(dx+LEG_X_R[ph],by-15,lw,lh+LEG_DY_R[ph]);
 }
 function drawDinoTrex(dx,dy,rf,jp){const cB='#535353',cD='#3c3c3c';const sq=landingSquish>0?Math.sin(landingSquish*.5)*(landingSquish/8):0,sY=Math.abs(sq)*4,sW=sq*2,bob=bodyBob(),by=dy-bob;ctx.fillStyle=cB;ctx.fillRect(dx+6-sW,by-30+sY,24+sW*2,15-sY);ctx.fillRect(dx+3,by-24,12,9);ctx.fillRect(dx+9,by-18,15,6);ctx.fillRect(dx-3,by-21,9,6);ctx.fillRect(dx-9,by-19,9,3);ctx.fillRect(dx+21,by-48,15,15);ctx.fillRect(dx+18,by-51,6,3);ctx.fillRect(dx+33,by-42,6,6);ctx.fillRect(dx+15,by-36,21,6);ctx.fillRect(dx+12,by-33,6,3);ctx.fillStyle=cD;ctx.fillRect(dx+3,by-33,3,3);ctx.fillRect(dx+0,by-27,3,3);ctx.fillStyle=cB;ctx.fillRect(dx+12,by-21,4,9);drawLegs(dx,dy,6,12,rf,jp);ctx.fillStyle='#fff';ctx.fillRect(dx+24,by-45,7,7);ctx.fillStyle='#000';ctx.fillRect(dx+26,by-43,3,3);ctx.fillStyle=cD;ctx.fillRect(dx+18,by-34,15,2)}
 function drawDinoTrike(dx,dy,rf,jp){const cB='#535353',cD='#3c3c3c';const sq=landingSquish>0?Math.sin(landingSquish*.5)*(landingSquish/8):0,sY=Math.abs(sq)*4,sW=sq*2,bob=bodyBob(),by=dy-bob;ctx.fillStyle=cB;ctx.fillRect(dx+8-sW,by-28+sY,22+sW*2,13-sY);ctx.fillRect(dx+4,by-22,10,8);ctx.fillRect(dx+12,by-16,12,5);ctx.fillRect(dx-3,by-20,8,5);ctx.fillRect(dx+26,by-44,12,14);ctx.fillRect(dx+24,by-48,16,6);ctx.fillRect(dx+22,by-38,18,4);ctx.fillStyle=cD;ctx.fillRect(dx+30,by-50,3,5);ctx.fillRect(dx+26,by-50,2,4);ctx.fillRect(dx+36,by-50,2,4);ctx.fillStyle=cB;ctx.fillRect(dx+36,by-38,6,5);ctx.fillStyle=cD;ctx.fillRect(dx+38,by-36,4,2);drawLegs(dx,dy,6,11,rf,jp);ctx.fillStyle='#fff';ctx.fillRect(dx+29,by-43,5,5);ctx.fillStyle='#000';ctx.fillRect(dx+31,by-42,2,2);ctx.fillStyle=cD;ctx.fillRect(dx+28,by-33,10,2)}
@@ -185,7 +186,8 @@ function drawDinoPara(dx,dy,rf,jp){const cB='#9b8b6b',cD='#7b6b4b',bob=bodyBob()
 function drawDinoCompso(dx,dy,rf,jp){const cB='#d4a060',cD='#b48040',bob=bodyBob(),by=dy-bob;const sq=landingSquish>0?Math.sin(landingSquish*.5)*(landingSquish/8):0,sY=Math.abs(sq)*4,sW=sq*2;ctx.fillStyle=cB;ctx.fillRect(dx+8-sW,by-16+sY,14+sW*2,8-sY);ctx.fillRect(dx+4,by-14,6,5);ctx.fillRect(dx-4,by-12,10,3);ctx.fillStyle='#fff';ctx.fillRect(dx+5,by-13,4,3);ctx.fillStyle='#000';ctx.fillRect(dx+6,by-12,2,2);ctx.fillStyle=cB;drawLegs(dx,dy,4,10,rf,jp)}
 function drawDinoMosa(dx,dy,rf,jp){const cB='#3a6a7a',cD='#1a4a5a',bob=bodyBob(),by=dy-bob;const sq=landingSquish>0?Math.sin(landingSquish*.5)*(landingSquish/8):0,sY=Math.abs(sq)*4,sW=sq*2;ctx.fillStyle=cB;ctx.fillRect(dx+4-sW,by-20+sY,24+sW*2,10-sY);ctx.fillRect(dx+0,by-18,6,6);ctx.fillStyle='#5a9aaa';ctx.fillRect(dx+2,by-26,4,8);ctx.fillRect(dx+16,by-26,4,8);ctx.fillRect(dx+28,by-30,4,14);ctx.fillStyle='#fff';ctx.fillRect(dx+1,by-17,4,3);ctx.fillStyle='#000';ctx.fillRect(dx+2,by-16,2,2);ctx.fillStyle=cB;drawLegs(dx,dy,5,8,rf,jp)}
 function drawDinoQuetzal(dx,dy,rf,jp){const cB='#c04040',cD='#a03030',bob=bodyBob(),by=dy-bob;const sq=landingSquish>0?Math.sin(landingSquish*.5)*(landingSquish/8):0,sY=Math.abs(sq)*4,sW=sq*2;ctx.fillStyle=cB;ctx.fillRect(dx+10,by-22,14,12);ctx.fillRect(dx+4,by-30,8,16);ctx.fillRect(dx-2,by-34,18,8);ctx.fillRect(dx+24,by-34,10,10);ctx.fillRect(dx+32,by-30,14,4);ctx.fillStyle='#fff';ctx.fillRect(dx+6,by-30,4,3);ctx.fillStyle='#000';ctx.fillRect(dx+8,by-29,2,1);ctx.fillStyle=cB;const wf=jp?5:0;ctx.fillRect(dx+2,by-22-wf,3,10+wf);ctx.fillRect(dx+16,by-22-wf,3,10+wf);ctx.fillStyle=cD;ctx.fillRect(dx-3,by-32,18,2)}
-function drawDino(dx,dy,rf,jp){[drawDinoTrex,drawDinoTrike,drawDinoRaptor,drawDinoPtero,drawDinoBrachio,drawDinoStego,drawDinoAnkylo,drawDinoSpino,drawDinoPachy,drawDinoDilopho,drawDinoPara,drawDinoCompso,drawDinoMosa,drawDinoQuetzal][dinoType](dx,dy,rf,jp)}
+const DINO_DRAW=[drawDinoTrex,drawDinoTrike,drawDinoRaptor,drawDinoPtero,drawDinoBrachio,drawDinoStego,drawDinoAnkylo,drawDinoSpino,drawDinoPachy,drawDinoDilopho,drawDinoPara,drawDinoCompso,drawDinoMosa,drawDinoQuetzal];
+function drawDino(dx,dy,rf,jp){DINO_DRAW[dinoType](dx,dy,rf,jp)}
 
 // ─── BG (20 themes) ───
 const SBG=['#f0f4f8','#f2f0ec','#edf2ea','#f5f0e8','#eceef0','#f0eeec','#e8eaee','#eae9ed','#eee8e4','#eceff4','#2a1018','#d8e8f4','#1a2a10','#1a1030','#d0e0f0','#0a1a28','#2a3028','#383838','#d8d8e0','#1a1028'];
@@ -227,11 +229,11 @@ function dR(x){const by=GROUND_Y;ctx.fillStyle='#888';ctx.beginPath();ctx.moveTo
 function dT(x){const by=GROUND_Y;ctx.fillStyle='#8B6914';ctx.fillRect(x+15,by-48,8,48);ctx.fillStyle='#3a7d3a';ctx.beginPath();ctx.moveTo(x+4,by-30);ctx.lineTo(x+19,by-58);ctx.lineTo(x+34,by-30);ctx.fill();ctx.fillStyle='#2d6b2d';ctx.beginPath();ctx.moveTo(x+7,by-22);ctx.lineTo(x+19,by-42);ctx.lineTo(x+31,by-22);ctx.fill();ctx.fillStyle='#348a34';ctx.beginPath();ctx.moveTo(x+10,by-15);ctx.lineTo(x+19,by-30);ctx.lineTo(x+28,by-15);ctx.fill();ctx.fillStyle='#7a5a10';ctx.fillRect(x+14,by-40,3,38)}
 
 // ─── SPEED LINES ───
-function dSL(){const spd=getSpeed();if(spd<6)return;const a=Math.min((spd-6)/3,.5);if(frame%3===0&&speedLines.length<15)speedLines.push({x:GAME_W,y:30+Math.random()*(GROUND_Y-80),len:20+Math.random()*40,life:20});for(let s of speedLines){s.x-=spd*1.2;s.life--;ctx.strokeStyle=`rgba(180,190,200,${a*s.life/20})`;ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(s.x,s.y);ctx.lineTo(s.x+s.len,s.y);ctx.stroke()}speedLines=speedLines.filter(s=>s.life>0&&s.x>-60)}
+function dSL(){const spd=getSpeed();if(spd<6)return;const a=Math.min((spd-6)/3,.5);if((frame&3)===0&&speedLines.length<12)speedLines.push({x:GAME_W,y:30+Math.random()*(GROUND_Y-80),len:20+Math.random()*40,life:20});ctx.lineWidth=1;for(let i=speedLines.length-1;i>=0;i--){const sl=speedLines[i];sl.x-=spd*1.2;sl.life--;if(sl.life<=0||sl.x<=-60){speedLines.splice(i,1);continue}ctx.strokeStyle=`rgba(180,190,200,${a*sl.life/20})`;ctx.beginPath();ctx.moveTo(sl.x,sl.y);ctx.lineTo(sl.x+sl.len,sl.y);ctx.stroke()}}
 
 // ─── DRAW ───
 function drawScene(){ctx.clearRect(0,0,GAME_W,GAME_H);const s=Math.min(stage-1,19)%20;ctx.fillStyle=SBG[s];ctx.fillRect(0,0,GAME_W,GAME_H);drawClouds();const prg=obstaclesPassed>=OBS-2?(obstaclesPassed-(OBS-2))/2:0,ns=(s+1)%20;drawHills();drawMountains();drawScenery(s);if(prg>0){ctx.globalAlpha=prg;drawScenery(ns);ctx.globalAlpha=1}if(s===9&&prg>0)drawPartyBG(prg);drawGround();dSL();
-  if(shieldActive){ctx.save();ctx.globalAlpha=.3+.2*Math.sin(frame*.2);ctx.fillStyle='#339af0';ctx.beginPath();ctx.arc(dino.x+21,dino.y-20,22,0,Math.PI*2);ctx.fill();ctx.restore()}
+  if(shieldActive){ctx.globalAlpha=.3+.2*Math.sin(frame*.2);ctx.fillStyle='#339af0';ctx.beginPath();ctx.arc(dino.x+21,dino.y-20,22,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1}
   if(getPerk()==='para'&&gameState==='playing'){const spd=getSpeed();for(let o of obstacles){if(o.x>DINO_X&&o.x-DINO_X<spd*120&&!o.passed){ctx.fillStyle='rgba(255,100,100,'+(.3+.2*Math.sin(frame*.3))+')';ctx.fillRect(o.x,0,o.w-8,GROUND_Y);break}}}
   drawDino(dino.x,dino.y,Math.floor(frame/6)%2===0,dino.jumping);
   for(let o of obstacles){if(o.type==='cactusTall')dCT(o.x);else if(o.type==='cactusShort')dCS(o.x);else if(o.type==='rock')dR(o.x);else if(o.type==='tree')dT(o.x)}
@@ -241,7 +243,6 @@ function drawScene(){ctx.clearRect(0,0,GAME_W,GAME_H);const s=Math.min(stage-1,1
   for(let pu of popups){const a=pu.life/pu.maxLife;ctx.fillStyle=`rgba(83,83,83,${a})`;ctx.font='bold 11px "Courier New"';ctx.fillText(pu.text,pu.x,pu.y)}
   if(stageFlash>0){const a=stageFlash/30;ctx.fillStyle=`rgba(255,255,255,${a*.3})`;ctx.fillRect(0,0,GAME_W,GAME_H)}
   if(comboCount>=3){const g=comboCount>=5?.25:.12,grad=ctx.createRadialGradient(GAME_W/2,GAME_H/2,100,GAME_W/2,GAME_H/2,GAME_W);grad.addColorStop(0,'transparent');grad.addColorStop(1,`rgba(255,215,0,${g})`);ctx.fillStyle=grad;ctx.fillRect(0,0,GAME_W,GAME_H)}
-  for(let s of starParticles){ctx.save();ctx.translate(s.x,s.y);ctx.rotate(s.rot);ctx.fillStyle='#ffd700';const sz=s.size;ctx.beginPath();for(let i=0;i<4;i++){const a=(i*Math.PI)/2;ctx.lineTo(Math.cos(a)*sz*2,Math.sin(a)*sz*2);ctx.lineTo(Math.cos(a+Math.PI/4)*sz,Math.sin(a+Math.PI/4)*sz)}ctx.fill();ctx.restore()}
 }
 
 function drawOverlay(){ctx.textAlign='center';
@@ -280,7 +281,7 @@ function getGap(){const g=[[200,300],[190,290],[180,280],[170,260],[160,250],[15
 function destroyNearestObstacle(){
   let nearest=null,minDist=250;
   for(let o of obstacles){if(!o.passed&&o.x>DINO_X&&o.x-DINO_X<minDist){minDist=o.x-DINO_X;nearest=o}}
-  if(nearest){obstacles=obstacles.filter(o=>o!==nearest);sp(nearest.x+nearest.w/2,GROUND_Y-30,12);ap(nearest.x+nearest.w/2,GROUND_Y-40,'💥 파괴!')}
+  if(nearest){const ix=obstacles.indexOf(nearest);if(ix>=0)obstacles.splice(ix,1);sp(nearest.x+nearest.w/2,GROUND_Y-30,12);ap(nearest.x+nearest.w/2,GROUND_Y-40,'💥 파괴!')}
 }
 function spawnObs(){obstacleTimer--;if(obstacleTimer>0)return;const gap=getGap();if(obstacles.length>0){const l=obstacles[obstacles.length-1];if(l.x+l.w+gap>GAME_W)return}let t;if(obstaclesSpawned>=OBS-1){t='tree'}else{t=STAGE_OBSTACLES[Math.min(stage-1,29)][Math.floor(srand()*STAGE_OBSTACLES[Math.min(stage-1,29)].length)]}const w={cactusTall:48,cactusShort:42,rock:54,tree:60};obstacles.push({x:GAME_W,type:t,w:w[t],passed:false});obstaclesSpawned++;obstacleTimer=stage<=3?28+Math.floor(srand()*18):stage<=6?20+Math.floor(srand()*14):stage<=10?14+Math.floor(srand()*10):stage<=20?8+Math.floor(srand()*8):5+Math.floor(srand()*6)}
 function chkCol(){const dB=getHitbox();for(let o of obstacles){let oB;if(o.type==='cactusTall')oB={x:o.x+10,y:GROUND_Y-42,w:10,h:42};else if(o.type==='cactusShort')oB={x:o.x+9,y:GROUND_Y-24,w:10,h:24};else if(o.type==='rock')oB={x:o.x+16,y:GROUND_Y-24,w:14,h:24};else oB={x:o.x+14,y:GROUND_Y-42,w:10,h:42};if(dB.x<oB.x+oB.w&&dB.x+dB.w>oB.x&&dB.y<oB.y+oB.h&&dB.y+dB.h>oB.y)return true}return false}
@@ -289,13 +290,14 @@ function ap(x,y,t){popups.push({x,y,text:t,life:30,maxLife:30})}
 
 // ─── UPDATE ───
 const OBS=7;
-function update(){if(inputLockTimer>0)inputLockTimer--;if(landingSquish>0)landingSquish--;if(gameState!=='playing'&&gameState!=='paused'){for(let i=confetti.length-1;i>=0;i--){confetti[i].x+=confetti[i].vx;confetti[i].y+=confetti[i].vy;confetti[i].vy+=.15;if(--confetti[i].life<=0)confetti.splice(i,1)}for(let i=starParticles.length-1;i>=0;i--){starParticles[i].x+=starParticles[i].vx;starParticles[i].y+=starParticles[i].vy;starParticles[i].vy+=.1;starParticles[i].rot+=.15;if(--starParticles[i].life<=0)starParticles.splice(i,1)}for(let i=particles.length-1;i>=0;i--){particles[i].x+=particles[i].vx;particles[i].y+=particles[i].vy;if(--particles[i].life<=0)particles.splice(i,1)}return}
+function update(){if(inputLockTimer>0)inputLockTimer--;if(landingSquish>0)landingSquish--;if(gameState!=='playing'&&gameState!=='paused'){for(let i=confetti.length-1;i>=0;i--){confetti[i].x+=confetti[i].vx;confetti[i].y+=confetti[i].vy;confetti[i].vy+=.15;if(--confetti[i].life<=0)confetti.splice(i,1)}for(let i=starParticles.length-1;i>=0;i--){starParticles[i].x+=starParticles[i].vx;starParticles[i].y+=starParticles[i].vy;starParticles[i].vy+=.1;starParticles[i].rot+=.15;if(--starParticles[i].life<=0)starParticles.splice(i,1)}for(let i=particles.length-1;i>=0;i--){particles[i].x+=particles[i].vx;particles[i].y+=particles[i].vy;if(--particles[i].life<=0)particles.splice(i,1)}flushGold();return}
   if(gameState==='paused'){return}
-  frame++;if(shakeFrames>0){shakeFrames--;shakeX=(Math.random()-.5)*shakeFrames*.7;shakeY=(Math.random()-.5)*shakeFrames*.7}else{shakeX=0;shakeY=0}if(stageFlash>0)stageFlash--;dino.gravity=getGravity();
+  frame++;if(jumpBuffer>0)jumpBuffer--;if(!dino.jumping)coyoteTime=6;else if(coyoteTime>0)coyoteTime--;if(shakeFrames>0){shakeFrames--;shakeX=(Math.random()-.5)*shakeFrames*.7;shakeY=(Math.random()-.5)*shakeFrames*.7}else{shakeX=0;shakeY=0}if(stageFlash>0)stageFlash--;dino.gravity=getGravity();
   if(dino.jumping){if(dino.jumpHeld&&dino.vy<-1&&dino.jumpBoostLeft>0){dino.vy-=.6;dino.jumpBoostLeft--;if(dino.vy<-13)dino.vy=-13}dino.vy+=dino.gravity;dino.y+=dino.vy;if(dino.y>=GROUND_Y){dino.y=GROUND_Y;dino.vy=0;if(dino.jumping){landingSquish=12;if(getPerk()==='pachy'&&wasJumping)destroyNearestObstacle()}dino.jumping=false;jumpsUsed=0;dino.jumpHeld=false;wasJumping=false}}
+  if(jumpBuffer>0&&!dino.jumping){startJump(1);jumpBuffer=0}
   const spd=getSpeed();for(let m of mts){m.x-=spd*.15;if(m.x+m.w<-20){m.x=GAME_W+Math.random()*100;m.h=40+Math.random()*50;m.w=80+Math.random()*60}}spawnObs();
   for(let o of obstacles){o.x-=spd;if(!o.passed&&o.x+o.w<dino.x){o.passed=true;obstaclesPassed++;const gm=getGoldMult();gold+=gm;goldEarnedThisRun+=gm;saveGold();const clr=dino.y-(GROUND_Y-(o.type==='cactusShort'||o.type==='rock'?30:48));if(clr>0&&clr<18){comboCount++;comboMult=comboCount>=5?5:comboCount>=3?3:2;const pts=10*comboMult;score+=pts;const gb=(comboCount>=5?8:comboCount>=3?5:3)*gm;gold+=gb;goldEarnedThisRun+=gb;saveGold();ap(o.x+o.w/2,GROUND_Y-70,comboCount>=5?'퍼펙트 x5! +'+gb+'🪙':comboCount>=3?'퍼펙트 x3! +'+gb+'🪙':'퍼펙트! +'+gb+'🪙');comboUI.style.display='block';comboUI.textContent=`콤보 x${comboMult}`;setTimeout(()=>{if(comboCount===0)comboUI.style.display='none'},800)}else{comboCount=0;comboMult=1;comboUI.style.display='none';score+=10;ap(o.x+o.w/2,GROUND_Y-60,'+10')}const ms=Math.floor(score/100);if(ms>scoreMilestone){scoreMilestone=ms;const mb=5*gm;gold+=mb;goldEarnedThisRun+=mb;saveGold();ap(dino.x+16,GROUND_Y-80,'+'+mb+'🪙 기록 달성!')}}}
-  obstacles=obstacles.filter(o=>o.x+o.w>-80);
+  for(let i=obstacles.length-1;i>=0;i--){if(obstacles[i].x+obstacles[i].w<=-80)obstacles.splice(i,1)}
   if(chkCol()){if(shieldActive){shieldActive=false;ap(dino.x+21,dino.y-40,'🛡️ 방패 파괴!')}else{gameState='gameOver';currentTip=Math.floor(Math.random()*TIPS.length);pauseBtn.classList.remove('show');inputLockTimer=90;shieldActive=false;comboCount=0;comboMult=1;comboUI.style.display='none';sp(dino.x+21,dino.y-25,25);shakeFrames=18;for(let i=0;i<8;i++)starParticles.push({x:dino.x+21,y:dino.y-40,vx:(Math.random()-.5)*3,vy:-2-Math.random()*4,life:60,maxLife:60,rot:Math.random()*Math.PI*2,size:3+Math.floor(Math.random()*3)});ap(dino.x+21,dino.y-55,'BONK!');if(score>hiScore){hiScore=score;localStorage.setItem('dinoHi',hiScore)}if(gameMode==='daily'&&score>dailyBest){dailyBest=score;localStorage.setItem('dailyBest',dailyBest)}showGameOverBtns()}}
   if(obstaclesPassed>=OBS){
     const clearedStage=stage;
@@ -307,15 +309,16 @@ function update(){if(inputLockTimer>0)inputLockTimer--;if(landingSquish>0)landin
     inputLockTimer=90;hideUI();stageFlash=30;
     const cl=['#ffd700','#ff6b6b','#51cf66','#339af0','#ff922b','#f06595','#20c997','#cc5de8'];for(let i=0;i<40&&confetti.length<60;i++)confetti.push({x:GAME_W/2,y:GAME_H/2,vx:(Math.random()-.5)*10,vy:-3-Math.random()*8,life:40+Math.random()*40,maxLife:80,size:3+Math.floor(Math.random()*5),color:cl[Math.floor(Math.random()*cl.length)]});
   }
-  for(let i=particles.length-1;i>=0;i--){particles[i].x+=particles[i].vx;particles[i].y+=particles[i].vy;if(--particles[i].life<=0)particles.splice(i,1)}for(let i=popups.length-1;i>=0;i--){popups[i].y-=.7;if(--popups[i].life<=0)popups.splice(i,1)}for(let i=confetti.length-1;i>=0;i--){confetti[i].x+=confetti[i].vx;confetti[i].y+=confetti[i].vy;confetti[i].vy+=.15;if(--confetti[i].life<=0)confetti.splice(i,1)}for(let i=starParticles.length-1;i>=0;i--){starParticles[i].x+=starParticles[i].vx;starParticles[i].y+=starParticles[i].vy;starParticles[i].vy+=.1;starParticles[i].rot+=.15;if(--starParticles[i].life<=0)starParticles.splice(i,1)}document.getElementById('score').textContent=String(score).padStart(5,'0');document.getElementById('hi').textContent=String(hiScore).padStart(5,'0');document.getElementById('stg').textContent=Math.min(stage,30);goldDisplay.textContent=gold}
-function draw(){ctx.save();if(shakeFrames>0)ctx.translate(shakeX,shakeY);drawScene();ctx.restore();if(gameState!=='playing'&&gameState!=='paused')drawOverlay();if(gameState==='paused')drawOverlay();if(gameState==='stageClear'){for(let c of confetti){ctx.fillStyle=c.color;ctx.fillRect(c.x,c.y,c.size,c.size)}}for(let s of starParticles){ctx.setTransform(1,0,0,1,s.x,s.y);ctx.rotate(s.rot);ctx.fillStyle='#ffd700';const sz=s.size;ctx.beginPath();for(let i=0;i<4;i++){const a=(i*Math.PI)/2;ctx.lineTo(Math.cos(a)*sz*2,Math.sin(a)*sz*2);ctx.lineTo(Math.cos(a+Math.PI/4)*sz,Math.sin(a+Math.PI/4)*sz)}ctx.fill()}ctx.setTransform(1,0,0,1,0,0)}
+  for(let i=particles.length-1;i>=0;i--){particles[i].x+=particles[i].vx;particles[i].y+=particles[i].vy;if(--particles[i].life<=0)particles.splice(i,1)}for(let i=popups.length-1;i>=0;i--){popups[i].y-=.7;if(--popups[i].life<=0)popups.splice(i,1)}for(let i=confetti.length-1;i>=0;i--){confetti[i].x+=confetti[i].vx;confetti[i].y+=confetti[i].vy;confetti[i].vy+=.15;if(--confetti[i].life<=0)confetti.splice(i,1)}for(let i=starParticles.length-1;i>=0;i--){starParticles[i].x+=starParticles[i].vx;starParticles[i].y+=starParticles[i].vy;starParticles[i].vy+=.1;starParticles[i].rot+=.15;if(--starParticles[i].life<=0)starParticles.splice(i,1)}scoreEl.textContent=String(score).padStart(5,'0');hiEl.textContent=String(hiScore).padStart(5,'0');stgEl.textContent=Math.min(stage,30);goldDisplay.textContent=gold;flushGold()}
+function draw(){if(shakeFrames>0)ctx.setTransform(1,0,0,1,shakeX,shakeY);drawScene();ctx.setTransform(1,0,0,1,0,0);if(gameState!=='playing'&&gameState!=='paused')drawOverlay();if(gameState==='paused')drawOverlay();if(gameState==='stageClear'){for(let c of confetti){ctx.fillStyle=c.color;ctx.fillRect(c.x,c.y,c.size,c.size)}}for(let s of starParticles){ctx.setTransform(1,0,0,1,s.x,s.y);ctx.rotate(s.rot);ctx.fillStyle='#ffd700';const sz=s.size;ctx.beginPath();for(let i=0;i<4;i++){const a=(i*Math.PI)/2;ctx.lineTo(Math.cos(a)*sz*2,Math.sin(a)*sz*2);ctx.lineTo(Math.cos(a+Math.PI/4)*sz,Math.sin(a+Math.PI/4)*sz)}ctx.fill()}ctx.setTransform(1,0,0,1,0,0)}
 function loop(){update();draw();requestAnimationFrame(loop)}
 
 // ─── RESET ───
-function resetGame(full){if(full){stage=1;score=0;goldEarnedThisRun=0;scoreMilestone=0;shieldActive=getPerk()==='stego'}obstaclesPassed=0;obstaclesSpawned=0;obstacles=[];particles=[];popups=[];confetti=[];speedLines=[];starParticles=[];obstacleTimer=40;shakeFrames=0;stageFlash=0;inputLockTimer=0;comboCount=0;comboMult=1;comboUI.style.display='none';dino.y=GROUND_Y;dino.vy=0;dino.jumping=false;wasJumping=false;jumpsUsed=0;dino.jumpHeld=false;dino.jumpBoostLeft=0;dino.gravity=getGravity();if(gameMode==='daily'){const n=new Date();const seed=n.getFullYear()*10000+(n.getMonth()+1)*100+n.getDate();let s=seed;srng=function(){s=(s*16807+0)%2147483647;return(s-1)/2147483646};for(let i=0;i<obstaclesSpawned;i++)srng()}else{srng=null}document.getElementById('score').textContent='00000';document.getElementById('hi').textContent=String(hiScore).padStart(5,'0');document.getElementById('stg').textContent=stage;goldDisplay.textContent=gold}
+function resetGame(full){if(full){stage=1;score=0;goldEarnedThisRun=0;scoreMilestone=0;shieldActive=getPerk()==='stego'}obstaclesPassed=0;obstaclesSpawned=0;obstacles=[];particles=[];popups=[];confetti=[];speedLines=[];starParticles=[];obstacleTimer=40;shakeFrames=0;stageFlash=0;inputLockTimer=0;comboCount=0;comboMult=1;comboUI.style.display='none';dino.y=GROUND_Y;dino.vy=0;dino.jumping=false;wasJumping=false;jumpsUsed=0;dino.jumpHeld=false;dino.jumpBoostLeft=0;jumpBuffer=0;coyoteTime=0;dino.gravity=getGravity();if(gameMode==='daily'){const n=new Date();const seed=n.getFullYear()*10000+(n.getMonth()+1)*100+n.getDate();let s=seed;srng=function(){s=(s*16807+0)%2147483647;return(s-1)/2147483646};for(let i=0;i<obstaclesSpawned;i++)srng()}else{srng=null}scoreEl.textContent='00000';hiEl.textContent=String(hiScore).padStart(5,'0');stgEl.textContent=stage;goldDisplay.textContent=gold}
 
 // ─── INPUT ───
-function jp(){if(inputLockTimer>0)return;if(gameState==='waiting'){if(!unlocked[dinoType])return;gameState='playing';resetGame(true);hideUI();pauseBtn.classList.add('show');pauseBtn.textContent='⏸';return}if(gameState==='paused'){gameState='playing';pauseBtn.textContent='⏸';return}if(gameState==='episode'){resetGame(false);gameState='playing';pauseBtn.classList.add('show');pauseBtn.textContent='⏸';return}if(gameState==='stageClear'){if(stage>=31){resetGame(true);gameState='waiting';showUI();return}resetGame(false);gameState='playing';pauseBtn.classList.add('show');pauseBtn.textContent='⏸';return}if(gameState==='gameOver'){return}if(gameState==='playing'&&!dino.jumping){dino.vy=getJumpPower();dino.jumping=true;dino.jumpHeld=true;dino.jumpBoostLeft=getJumpBoost();jumpsUsed=1;wasJumping=true}else if(gameState==='playing'&&jumpsUsed===1&&dino.vy>0&&canDoubleJump()){dino.vy=getJumpPower()*.8;jumpsUsed=2;dino.jumpHeld=true;dino.jumpBoostLeft=10;sp(dino.x+21,dino.y-10,5);if(getPerk()==='ankylo')destroyNearestObstacle()}else if(gameState==='playing'&&jumpsUsed===2&&dino.vy>0&&getPerk()==='quetzal'){dino.vy=getJumpPower()*.6;jumpsUsed=3;dino.jumpHeld=true;dino.jumpBoostLeft=6;sp(dino.x+21,dino.y-10,5)}}
+function startJump(n){dino.vy=getJumpPower()*(n===1?1:n===2?.8:.6);dino.jumping=true;dino.jumpHeld=true;dino.jumpBoostLeft=n===1?getJumpBoost():n===2?10:6;jumpsUsed=n;wasJumping=true;coyoteTime=0;if(n>1){sp(dino.x+21,dino.y-10,5);if(n===2&&getPerk()==='ankylo')destroyNearestObstacle()}}
+function jp(){if(inputLockTimer>0)return;if(gameState==='waiting'){if(!unlocked[dinoType])return;gameState='playing';resetGame(true);hideUI();pauseBtn.classList.add('show');pauseBtn.textContent='⏸';return}if(gameState==='paused'){gameState='playing';pauseBtn.textContent='⏸';return}if(gameState==='episode'){resetGame(false);gameState='playing';pauseBtn.classList.add('show');pauseBtn.textContent='⏸';return}if(gameState==='stageClear'){if(stage>=31){resetGame(true);gameState='waiting';showUI();return}resetGame(false);gameState='playing';pauseBtn.classList.add('show');pauseBtn.textContent='⏸';return}if(gameState==='gameOver'){return}if(gameState==='playing'&&(!dino.jumping||coyoteTime>0)){startJump(1);jumpBuffer=0}else if(gameState==='playing'&&jumpsUsed===1&&dino.vy>0&&canDoubleJump()){startJump(2);jumpBuffer=0}else if(gameState==='playing'&&jumpsUsed===2&&dino.vy>0&&getPerk()==='quetzal'){startJump(3);jumpBuffer=0}else if(gameState==='playing'){jumpBuffer=6}}
 function jr(){dino.jumpHeld=false}
 document.addEventListener('keydown',e=>{if(gameState==='waiting'){if(e.code==='ArrowLeft'){cycleDino(-1);return}if(e.code==='ArrowRight'){cycleDino(1);return}}if(e.code==='Space'||e.code==='ArrowUp'){e.preventDefault();jp()}});
 document.addEventListener('keyup',e=>{if(e.code==='Space'||e.code==='ArrowUp')jr()});
