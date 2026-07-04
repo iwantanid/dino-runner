@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>DINO RUNNER v7</title>
+<title>DINO RUNNER v8</title>
 <style>
   * { margin:0; padding:0; box-sizing:border-box; }
   html, body {
@@ -47,7 +47,7 @@
   <div>HI <span id="hi">00000</span></div>
   <div><span id="score">00000</span></div>
   <div>STAGE <span id="stg">1</span></div>
-  <div style="font-size:8px;color:#ccc;margin-top:2px;">v7</div>
+  <div style="font-size:8px;color:#ccc;margin-top:2px;">v8</div>
 </div>
 <div id="overlay">
   <div id="msg">
@@ -65,12 +65,14 @@ let gameState = 'waiting';
 let stage = 1, score = 0, obstaclesPassed = 0;
 let hiScore = parseInt(localStorage.getItem('dinoHi')||'0');
 let frame = 0, obstacleTimer = 0;
-let obstacles = [], particles = [], popups = [], confetti = [];
+let obstacles = [], particles = [], popups = [], confetti = [], starParticles = [];
 let shakeX = 0, shakeY = 0, shakeFrames = 0;
 let stageFlash = 0;
 let canDoubleJump = false, jumpsUsed = 0;
 let speedLines = [];
-let obstaclesSpawned = 0; // track for last-obstacle logic
+let obstaclesSpawned = 0;
+let inputLockTimer = 0; // prevent accidental skip of result screens
+let landingSquish = 0; // bounce animation on landing
 
 // ─── RESIZE ───
 const GAME_W = 900, GAME_H = 300;
@@ -109,22 +111,37 @@ for (let i = 0; i < 6; i++) {
 // ─── DRAW DINO ───
 function drawDino(dx, dy, runFrame, jumping) {
   const cBody = '#535353', cDark = '#3c3c3c';
+  const squish = landingSquish > 0 ? Math.sin(landingSquish*0.5) * (landingSquish/8) : 0;
+  const squishY = Math.abs(squish) * 4;
+  const squishW = squish * 2;
+
   ctx.fillStyle = cBody;
+  // body with squish
+  ctx.fillRect(dx+6-squishW, dy-30+squishY, 24+squishW*2, 15-squishY);
+  ctx.fillRect(dx+3, dy-24, 12, 9);
+  ctx.fillRect(dx+9, dy-18, 15, 6);
+
+  // tail
+  ctx.fillRect(dx-3, dy-21, 9, 6);
+  ctx.fillRect(dx-9, dy-19, 9, 3);
+
+  // head
   ctx.fillRect(dx+21, dy-48, 15, 15);
   ctx.fillRect(dx+18, dy-51, 6, 3);
   ctx.fillRect(dx+33, dy-42, 6, 6);
   ctx.fillRect(dx+15, dy-36, 21, 6);
   ctx.fillRect(dx+12, dy-33, 6, 3);
-  ctx.fillRect(dx+6, dy-30, 24, 15);
-  ctx.fillRect(dx+3, dy-24, 12, 9);
-  ctx.fillRect(dx+9, dy-18, 15, 6);
-  ctx.fillRect(dx-3, dy-21, 9, 6);
-  ctx.fillRect(dx-9, dy-19, 9, 3);
+
+  // spikes
   ctx.fillStyle = cDark;
   ctx.fillRect(dx+3, dy-33, 3, 3);
   ctx.fillRect(dx+0, dy-27, 3, 3);
+
+  // arm
   ctx.fillStyle = cBody;
   ctx.fillRect(dx+12, dy-21, 4, 9);
+
+  // legs
   const legW = 6, legH = 12;
   if (jumping) {
     ctx.fillRect(dx+6, dy-15, legW, 5);
@@ -136,10 +153,35 @@ function drawDino(dx, dy, runFrame, jumping) {
     ctx.fillRect(dx+3, dy-15, legW, legH);
     ctx.fillRect(dx+21, dy-15, legW, legH-3);
   }
+
+  // ── GOOGLY EYE (tracks nearest obstacle) ──
+  let eyeOffX = 0, eyeOffY = 0;
+  if (obstacles.length > 0 && gameState === 'playing') {
+    let nearest = null, nearestDist = Infinity;
+    for (let o of obstacles) {
+      const dist = o.x + o.w/2 - (dx+27);
+      if (dist > -30 && dist < nearestDist) { nearestDist = dist; nearest = o; }
+    }
+    if (nearest) {
+      const angle = Math.atan2((GROUND_Y - (nearest.type==='cactusShort'||nearest.type==='rock'?GROUND_Y-25:GROUND_Y-45)) - (dy-42), nearest.x + nearest.w/2 - (dx+27));
+      eyeOffX = Math.cos(angle) * 1.5;
+      eyeOffY = Math.sin(angle) * 1.5;
+    }
+  }
+  // eye white
   ctx.fillStyle = '#fff';
   ctx.fillRect(dx+24, dy-45, 7, 7);
+  // pupil (tracks)
   ctx.fillStyle = '#000';
-  ctx.fillRect(dx+26, dy-43, 3, 3);
+  ctx.fillRect(dx+25+eyeOffX, dy-44+eyeOffY, 3, 3);
+
+  // ── TONGUE (when jumping) ──
+  if (jumping && dino.vy < -3) {
+    ctx.fillStyle = '#ff6b6b';
+    ctx.fillRect(dx+30, dy-33, 3, 6);
+  }
+
+  // mouth
   ctx.fillStyle = cDark;
   ctx.fillRect(dx+18, dy-34, 15, 2);
 }
@@ -285,6 +327,24 @@ function drawScene() {
     ctx.fillStyle = `rgba(255,255,255,${a*0.3})`;
     ctx.fillRect(0, 0, GAME_W, GAME_H);
   }
+
+  // star particles (⭐ cartoon stars on death)
+  for (let s of starParticles) {
+    ctx.save();
+    ctx.translate(s.x, s.y);
+    ctx.rotate(s.rot);
+    ctx.fillStyle = '#ffd700';
+    const sz = s.size;
+    // draw a 4-point star
+    ctx.beginPath();
+    for (let i=0; i<4; i++) {
+      const a = (i*Math.PI)/2;
+      ctx.lineTo(Math.cos(a)*sz*2, Math.sin(a)*sz*2);
+      ctx.lineTo(Math.cos(a+Math.PI/4)*sz, Math.sin(a+Math.PI/4)*sz);
+    }
+    ctx.fill();
+    ctx.restore();
+  }
 }
 
 function drawOverlay() {
@@ -397,7 +457,18 @@ function addPopup(x,y,text) {
 // ─── UPDATE ───
 const OBS_CLEAR = 7;
 function update() {
-  if (gameState!=='playing') return;
+  // input lock countdown (even when not playing)
+  if (inputLockTimer > 0) inputLockTimer--;
+  // landing squish decay
+  if (landingSquish > 0) landingSquish--;
+
+  if (gameState!=='playing') {
+    // still animate particles/confetti during overlays
+    confetti = confetti.filter(c => { c.x += c.vx; c.y += c.vy; c.vy += 0.15; c.life--; return c.life > 0; });
+    starParticles = starParticles.filter(s => { s.x += s.vx; s.y += s.vy; s.vy += 0.1; s.rot += 0.15; s.life--; return s.life > 0; });
+    particles = particles.filter(p => { p.x += p.vx; p.y += p.vy; p.life--; return p.life > 0; });
+    return;
+  }
   frame++;
 
   // shake decay
@@ -417,6 +488,7 @@ function update() {
     if (dino.y >= GROUND_Y) {
       dino.y = GROUND_Y;
       dino.vy = 0;
+      if (dino.jumping) landingSquish = 12; // landing bounce!
       dino.jumping = false;
       jumpsUsed = 0;
     }
@@ -443,13 +515,24 @@ function update() {
 
   if (checkCollision()) {
     gameState = 'gameOver';
+    inputLockTimer = 90; // 1.5s before can tap
     spawnParticles(dino.x+21, dino.y-25, 25);
     shakeFrames = 18;
+    // Cartoon stars spinning around head
+    for (let i=0;i<8;i++) {
+      starParticles.push({
+        x: dino.x+21, y: dino.y-40,
+        vx: (Math.random()-0.5)*3, vy: -2-Math.random()*4,
+        life: 60, maxLife: 60, rot: Math.random()*Math.PI*2, size: 3+Math.floor(Math.random()*3)
+      });
+    }
+    addPopup(dino.x+21, dino.y-55, 'BONK!');
     if (score > hiScore) { hiScore = score; localStorage.setItem('dinoHi', hiScore); }
   }
 
   if (obstaclesPassed >= OBS_CLEAR) {
     gameState = 'stageClear';
+    inputLockTimer = 90; // 1.5s celebration view
     if (stage < 10) stage++;
     stageFlash = 30;
     // Celebration confetti burst!
@@ -469,6 +552,7 @@ function update() {
   particles = particles.filter(p => { p.x += p.vx; p.y += p.vy; p.life--; return p.life > 0; });
   popups = popups.filter(pu => { pu.y -= 0.7; pu.life--; return pu.life > 0; });
   confetti = confetti.filter(c => { c.x += c.vx; c.y += c.vy; c.vy += 0.15; c.life--; return c.life > 0; });
+  starParticles = starParticles.filter(s => { s.x += s.vx; s.y += s.vy; s.vy += 0.1; s.rot += 0.15; s.life--; return s.life > 0; });
 
   document.getElementById('score').textContent = String(score).padStart(5,'0');
   document.getElementById('hi').textContent = String(hiScore).padStart(5,'0');
@@ -488,6 +572,18 @@ function draw() {
     }
   }
   if (gameState !== 'playing') drawOverlay();
+  // stars on top of overlay
+  for (let s of starParticles) {
+    ctx.save(); ctx.translate(s.x, s.y); ctx.rotate(s.rot);
+    ctx.fillStyle = '#ffd700'; const sz = s.size;
+    ctx.beginPath();
+    for (let i=0; i<4; i++) {
+      const a = (i*Math.PI)/2;
+      ctx.lineTo(Math.cos(a)*sz*2, Math.sin(a)*sz*2);
+      ctx.lineTo(Math.cos(a+Math.PI/4)*sz, Math.sin(a+Math.PI/4)*sz);
+    }
+    ctx.fill(); ctx.restore();
+  }
 }
 
 function loop() { update(); draw(); requestAnimationFrame(loop); }
@@ -495,8 +591,8 @@ function loop() { update(); draw(); requestAnimationFrame(loop); }
 // ─── RESET ───
 function resetGame(full) {
   if (full) { stage = 1; score = 0; }
-  obstaclesPassed = 0; obstaclesSpawned = 0; obstacles = []; particles = []; popups = []; confetti = []; speedLines = [];
-  obstacleTimer = 40; shakeFrames = 0; stageFlash = 0;
+  obstaclesPassed = 0; obstaclesSpawned = 0; obstacles = []; particles = []; popups = []; confetti = []; speedLines = []; starParticles = [];
+  obstacleTimer = 40; shakeFrames = 0; stageFlash = 0; inputLockTimer = 0;
   dino.y = GROUND_Y; dino.vy = 0; dino.jumping = false; jumpsUsed = 0;
   document.getElementById('score').textContent = '00000';
   document.getElementById('hi').textContent = String(hiScore).padStart(5,'0');
@@ -505,6 +601,7 @@ function resetGame(full) {
 
 // ─── INPUT ───
 function doJump() {
+  if (inputLockTimer > 0) return; // block input during result screens
   if (gameState === 'waiting') { gameState = 'playing'; resetGame(true); return; }
   if (gameState === 'stageClear') { resetGame(false); gameState = 'playing'; return; }
   if (gameState === 'gameOver') { resetGame(true); gameState = 'playing'; return; }
